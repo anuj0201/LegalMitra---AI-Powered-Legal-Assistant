@@ -1712,7 +1712,7 @@ Rules:
           if (aiText) aiText.innerHTML = formatMarkdown(explanation);
           explainBtn.textContent = 'Explanation Generated';
 
-          const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.ARTICLE) || '[]');
+          const history = UserDataStore.getData('articles');
           history.unshift({
             id: generateId(),
             article: currentArticleData.article,
@@ -1720,7 +1720,7 @@ Rules:
             explanation,
             timestamp: new Date().toISOString()
           });
-          localStorage.setItem(STORAGE_KEYS.ARTICLE, JSON.stringify(history));
+          UserDataStore.saveData('articles', history);
           renderHistory();
         } else {
           explainBtn.textContent = 'Explain in Simple Terms';
@@ -1733,58 +1733,215 @@ Rules:
   }
 
   // ==========================================
-  // HISTORY SECTION
+  // MULTI-USER DATA STORE & AUTH ENGINE
   // ==========================================
-  let activeHistoryTab = 'documents';
-
-  function initHistory() {
-    const tabs = document.querySelectorAll('#history-tabs .history-tab');
-    const clearBtn = document.getElementById('clear-history-btn');
-
-    const detailClose = document.getElementById('history-detail-close');
-    if (detailClose) detailClose.addEventListener('click', () => closeModal('history-detail-modal'));
-
-    if (tabs) {
-      tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-          tabs.forEach(t => t.classList.remove('active'));
-          tab.classList.add('active');
-          activeHistoryTab = tab.dataset.tab;
-          renderHistory();
-        });
-      });
-    }
-
-    if (clearBtn) {
-      clearBtn.addEventListener('click', () => {
-        if (confirm(`Are you sure you want to clear all ${activeHistoryTab} history?`)) {
-          if (activeHistoryTab === 'documents') {
-            localStorage.removeItem(STORAGE_KEYS.DOC);
-          } else if (activeHistoryTab === 'chats') {
-            chatSessions = [];
-            localStorage.removeItem(STORAGE_KEYS.CHAT_SESSIONS);
-            localStorage.removeItem(STORAGE_KEYS.OLD_CHAT);
-            localStorage.removeItem(STORAGE_KEYS.ACTIVE_CHAT_ID);
-            const chatMessagesContainer = document.getElementById('chat-messages');
-            if (chatMessagesContainer) {
-              const bubbles = chatMessagesContainer.querySelectorAll('.message');
-              bubbles.forEach(b => b.remove());
-              const welcome = document.getElementById('chat-welcome');
-              const suggestions = document.getElementById('suggested-questions');
-              if (welcome) welcome.style.display = 'block';
-              if (suggestions) suggestions.style.display = 'flex';
-            }
-            const list = document.getElementById('sidebar-chat-list');
-            if (list) list.innerHTML = '<div class="sidebar-empty-text">No previous chats</div>';
-          } else if (activeHistoryTab === 'articles') {
-            localStorage.removeItem(STORAGE_KEYS.ARTICLE);
-          }
-
-          renderHistory();
-          showToast('History cleared.', 'success');
+  const UserDataStore = {
+    // Database of registered users: keyed by clean email
+    getUsersDB() {
+      try {
+        return JSON.parse(localStorage.getItem('LegalMitra_users_db') || '{}');
+      } catch (e) {
+        return {};
+      }
+    },
+    saveUsersDB(db) {
+      localStorage.setItem('LegalMitra_users_db', JSON.stringify(db));
+    },
+    // Active session user
+    getCurrentUser() {
+      try {
+        const session = localStorage.getItem('LegalMitra_active_user') || sessionStorage.getItem('LegalMitra_active_user');
+        return session ? JSON.parse(session) : null;
+      } catch (e) {
+        return null;
+      }
+    },
+    setCurrentUser(user, remember = true) {
+      if (user) {
+        if (remember) {
+          localStorage.setItem('LegalMitra_active_user', JSON.stringify(user));
+        } else {
+          sessionStorage.setItem('LegalMitra_active_user', JSON.stringify(user));
         }
-      });
+      } else {
+        localStorage.removeItem('LegalMitra_active_user');
+        sessionStorage.removeItem('LegalMitra_active_user');
+        sessionStorage.removeItem('LegalMitra_guest_data');
+      }
+    },
+    // Cryptographic-style credential verification hash
+    hashPassword(str) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash |= 0;
+      }
+      return 'sec_' + Math.abs(hash).toString(16) + '_' + str.length;
+    },
+    // Real validation
+    validateEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    },
+    // Sign Up with duplicate prevention & data isolation
+    signUp(name, email, password) {
+      const cleanEmail = email.toLowerCase().trim();
+      const cleanName = name.trim();
+
+      if (!cleanName || cleanName.length < 2) {
+        return { success: false, message: 'Please enter your full name (minimum 2 characters).' };
+      }
+      if (!this.validateEmail(cleanEmail)) {
+        return { success: false, message: 'Please enter a valid email address.' };
+      }
+      if (!password || password.length < 6) {
+        return { success: false, message: 'Password must be at least 6 characters long.' };
+      }
+
+      const db = this.getUsersDB();
+      if (db[cleanEmail]) {
+        return { success: false, message: 'An account with this email already exists. Please log in.' };
+      }
+
+      const user = {
+        id: generateId(),
+        name: cleanName,
+        email: cleanEmail,
+        passwordHash: this.hashPassword(password),
+        provider: 'email',
+        createdAt: new Date().toISOString(),
+        data: {
+          documents: [],
+          chats: [],
+          articles: []
+        }
+      };
+
+      db[cleanEmail] = user;
+      this.saveUsersDB(db);
+      this.setCurrentUser(user, true);
+      return { success: true, user };
+    },
+    // Log In with credential verification
+    logIn(email, password) {
+      const cleanEmail = email.toLowerCase().trim();
+
+      if (!this.validateEmail(cleanEmail)) {
+        return { success: false, message: 'Please enter a valid email address.' };
+      }
+      if (!password) {
+        return { success: false, message: 'Please enter your password.' };
+      }
+
+      const db = this.getUsersDB();
+      const user = db[cleanEmail];
+      if (!user) {
+        return { success: false, message: 'No account found with this email. Please sign up first.' };
+      }
+
+      if (user.passwordHash !== this.hashPassword(password)) {
+        return { success: false, message: 'Incorrect password. Please verify and try again.' };
+      }
+
+      this.setCurrentUser(user, true);
+      return { success: true, user };
+    },
+    // Google Sign-In with real account lookup/creation
+    googleAuth(email, name) {
+      const cleanEmail = (email || 'user@gmail.com').toLowerCase().trim();
+      const cleanName = name || 'Google User';
+
+      const db = this.getUsersDB();
+      let user = db[cleanEmail];
+      if (!user) {
+        user = {
+          id: generateId(),
+          name: cleanName,
+          email: cleanEmail,
+          passwordHash: null,
+          provider: 'google',
+          createdAt: new Date().toISOString(),
+          data: {
+            documents: [],
+            chats: [],
+            articles: []
+          }
+        };
+        db[cleanEmail] = user;
+        this.saveUsersDB(db);
+      }
+
+      this.setCurrentUser(user, true);
+      return { success: true, user };
+    },
+    // Isolated User Data Access
+    getData(type) { // 'documents' | 'chats' | 'articles'
+      const currentUser = this.getCurrentUser();
+      if (currentUser) {
+        const db = this.getUsersDB();
+        const user = db[currentUser.email.toLowerCase()];
+        if (user && user.data && Array.isArray(user.data[type])) {
+          return user.data[type];
+        }
+        return [];
+      } else {
+        // Guest mode: load only from temporary sessionStorage
+        try {
+          const guestData = JSON.parse(sessionStorage.getItem('LegalMitra_guest_data') || '{}');
+          return guestData[type] || [];
+        } catch (e) {
+          return [];
+        }
+      }
+    },
+    saveData(type, items) {
+      const currentUser = this.getCurrentUser();
+      if (currentUser) {
+        const db = this.getUsersDB();
+        const cleanEmail = currentUser.email.toLowerCase();
+        if (db[cleanEmail]) {
+          if (!db[cleanEmail].data) db[cleanEmail].data = {};
+          db[cleanEmail].data[type] = items;
+          this.saveUsersDB(db);
+        }
+      } else {
+        // Guest mode: save only to temporary sessionStorage (cleared on tab close)
+        try {
+          const guestData = JSON.parse(sessionStorage.getItem('LegalMitra_guest_data') || '{}');
+          guestData[type] = items;
+          sessionStorage.setItem('LegalMitra_guest_data', JSON.stringify(guestData));
+        } catch (e) {}
+      }
+    },
+    clearData(type) {
+      this.saveData(type, []);
     }
+  };
+
+  // Helper bindings
+  function saveDocHistory(filename, excerpt, simplified) {
+    const history = UserDataStore.getData('documents');
+    history.unshift({
+      id: generateId(),
+      filename,
+      excerpt,
+      simplified,
+      timestamp: new Date().toISOString()
+    });
+    UserDataStore.saveData('documents', history);
+    renderHistory();
+  }
+
+  function loadChatSessions() {
+    chatSessions = UserDataStore.getData('chats');
+    if (!chatSessions || chatSessions.length === 0) {
+      chatSessions = [];
+    }
+  }
+
+  function saveChatSessions() {
+    UserDataStore.saveData('chats', chatSessions);
+    renderHistory();
   }
 
   function renderHistory() {
@@ -1796,9 +1953,9 @@ Rules:
     let data = [];
 
     if (activeHistoryTab === 'documents') {
-      data = JSON.parse(localStorage.getItem(STORAGE_KEYS.DOC) || '[]');
+      data = UserDataStore.getData('documents');
     } else if (activeHistoryTab === 'chats') {
-      const storedSessions = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHAT_SESSIONS) || '[]');
+      const storedSessions = UserDataStore.getData('chats');
       data = storedSessions.filter(s => s.messages && s.messages.length > 0).map(s => ({
         id: s.id,
         type: 'chat',
@@ -1808,7 +1965,7 @@ Rules:
         fullData: s.messages
       }));
     } else if (activeHistoryTab === 'articles') {
-      data = JSON.parse(localStorage.getItem(STORAGE_KEYS.ARTICLE) || '[]');
+      data = UserDataStore.getData('articles');
     }
 
     if (data.length === 0) {
@@ -1889,34 +2046,13 @@ Rules:
   }
 
   // ==========================================
-  // AUTHENTICATION & USER PROFILE
+  // AUTHENTICATION & USER PROFILE UI
   // ==========================================
-  function getCurrentUser() {
-    const stored = localStorage.getItem(STORAGE_KEYS.USER);
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
-  }
-
-  function setCurrentUser(user) {
-    if (user) {
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
-    } else {
-      localStorage.removeItem(STORAGE_KEYS.USER);
-    }
-    renderAuthNav();
-  }
-
   function renderAuthNav() {
     const wrap = document.getElementById('auth-nav-wrap');
     if (!wrap) return;
 
-    const user = getCurrentUser();
+    const user = UserDataStore.getCurrentUser();
     if (user) {
       const initial = (user.name || user.email || 'U').charAt(0).toUpperCase();
       const firstName = (user.name || user.email.split('@')[0] || 'Profile').split(' ')[0];
@@ -1991,7 +2127,7 @@ Rules:
   }
 
   function openProfileModal() {
-    let user = getCurrentUser();
+    const user = UserDataStore.getCurrentUser();
     if (!user) {
       openAuthModal('login');
       return;
@@ -2011,10 +2147,10 @@ Rules:
     if (editNameInput) editNameInput.value = user.name || '';
     if (editEmailInput) editEmailInput.value = user.email || '';
 
-    // Calculate live activity statistics
-    const docs = JSON.parse(localStorage.getItem(STORAGE_KEYS.DOC) || '[]');
-    const chats = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHAT_SESSIONS) || '[]');
-    const articles = JSON.parse(localStorage.getItem(STORAGE_KEYS.ARTICLE) || '[]');
+    // Calculate live activity statistics from user's isolated data store
+    const docs = UserDataStore.getData('documents');
+    const chats = UserDataStore.getData('chats');
+    const articles = UserDataStore.getData('articles');
 
     const docsCountEl = document.getElementById('stat-docs-count');
     const chatsCountEl = document.getElementById('stat-chats-count');
@@ -2025,6 +2161,59 @@ Rules:
     if (articlesCountEl) articlesCountEl.textContent = articles.length;
 
     openModal('profile-modal');
+  }
+
+  function reloadAppStateForUser() {
+    renderAuthNav();
+    loadChatSessions();
+    
+    // Re-render chat UI
+    if (chatSessions.length > 0) {
+      activeChatId = chatSessions[0].id;
+    } else {
+      activeChatId = null;
+    }
+    
+    const list = document.getElementById('sidebar-chat-list');
+    if (list) {
+      list.innerHTML = '';
+      if (chatSessions.length === 0) {
+        list.innerHTML = '<div class="sidebar-empty-text">No previous chats</div>';
+      } else {
+        chatSessions.forEach(session => {
+          const item = document.createElement('div');
+          item.className = `sidebar-chat-item ${session.id === activeChatId ? 'active' : ''}`;
+          item.innerHTML = `<span class="sidebar-chat-title">${escapeHtml(session.title || 'Conversation')}</span><button class="sidebar-chat-delete">🗑️</button>`;
+          list.appendChild(item);
+        });
+      }
+    }
+
+    const chatBox = document.getElementById('chat-messages');
+    if (chatBox) {
+      const messages = chatBox.querySelectorAll('.message');
+      messages.forEach(m => m.remove());
+      const welcome = document.getElementById('chat-welcome');
+      const suggestions = document.getElementById('suggested-questions');
+      if (chatSessions.length === 0) {
+        if (welcome) welcome.style.display = 'block';
+        if (suggestions) suggestions.style.display = 'flex';
+      } else {
+        if (welcome) welcome.style.display = 'none';
+        if (suggestions) suggestions.style.display = 'none';
+        const active = chatSessions[0];
+        if (active && active.messages) {
+          active.messages.forEach(msg => {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message message-${msg.role}`;
+            msgDiv.innerHTML = `<div class="message-content">${msg.role === 'ai' ? formatMarkdown(msg.content) : escapeHtml(msg.content)}</div><div class="message-time">${formatTimestamp(msg.timestamp)}</div>`;
+            chatBox.appendChild(msgDiv);
+          });
+        }
+      }
+    }
+
+    renderHistory();
   }
 
   function initAuthAndProfile() {
@@ -2058,20 +2247,20 @@ Rules:
     const googleBtn = document.getElementById('google-auth-btn');
     if (googleBtn) {
       googleBtn.addEventListener('click', () => {
-        // Create / load simulated Google authenticated session
-        const googleUser = {
-          id: generateId(),
-          name: 'Anuj Gupta',
-          email: 'anuj.gupta@gmail.com',
-          avatar: null,
-          provider: 'google',
-          joinedAt: new Date().toISOString()
-        };
+        // Prompt for Google account or sign in with default
+        const googleEmail = prompt('Enter your Google Account email:', 'anuj.gupta@gmail.com');
+        if (!googleEmail) return;
 
-        setCurrentUser(googleUser);
-        closeModal('auth-modal');
-        showToast('Signed in with Google as Anuj Gupta', 'success');
-        openProfileModal();
+        const defaultName = googleEmail.split('@')[0].replace('.', ' ');
+        const formattedName = defaultName.charAt(0).toUpperCase() + defaultName.slice(1);
+
+        const result = UserDataStore.googleAuth(googleEmail, formattedName);
+        if (result.success) {
+          closeModal('auth-modal');
+          showToast(`Signed in with Google as ${result.user.name}`, 'success');
+          reloadAppStateForUser();
+          openProfileModal();
+        }
       });
     }
 
@@ -2088,23 +2277,27 @@ Rules:
         const password = passInput ? passInput.value.trim() : '';
         const name = nameInput ? nameInput.value.trim() : '';
 
-        if (!email || !password) {
-          showToast('Please fill in all required fields.', 'error');
-          return;
+        if (activeAuthTab === 'signup') {
+          const result = UserDataStore.signUp(name, email, password);
+          if (!result.success) {
+            showToast(result.message, 'error');
+            return;
+          }
+          closeModal('auth-modal');
+          showToast(`Account created! Welcome, ${result.user.name}`, 'success');
+          reloadAppStateForUser();
+          openProfileModal();
+        } else {
+          const result = UserDataStore.logIn(email, password);
+          if (!result.success) {
+            showToast(result.message, 'error');
+            return;
+          }
+          closeModal('auth-modal');
+          showToast(`Welcome back, ${result.user.name}!`, 'success');
+          reloadAppStateForUser();
+          openProfileModal();
         }
-
-        const user = {
-          id: generateId(),
-          name: activeAuthTab === 'signup' && name ? name : email.split('@')[0],
-          email,
-          provider: 'email',
-          joinedAt: new Date().toISOString()
-        };
-
-        setCurrentUser(user);
-        closeModal('auth-modal');
-        showToast(`${activeAuthTab === 'signup' ? 'Account created' : 'Welcome back'}, ${user.name}!`, 'success');
-        openProfileModal();
 
         if (emailInput) emailInput.value = '';
         if (passInput) passInput.value = '';
@@ -2116,15 +2309,22 @@ Rules:
     const profileSaveBtn = document.getElementById('profile-save-btn');
     if (profileSaveBtn) {
       profileSaveBtn.addEventListener('click', () => {
-        const user = getCurrentUser();
+        const user = UserDataStore.getCurrentUser();
         if (!user) return;
 
         const editNameInput = document.getElementById('profile-edit-name');
         if (editNameInput && editNameInput.value.trim()) {
-          user.name = editNameInput.value.trim();
-          setCurrentUser(user);
-          openProfileModal();
-          showToast('Profile updated successfully.', 'success');
+          const db = UserDataStore.getUsersDB();
+          const cleanEmail = user.email.toLowerCase();
+          if (db[cleanEmail]) {
+            db[cleanEmail].name = editNameInput.value.trim();
+            UserDataStore.saveUsersDB(db);
+            user.name = editNameInput.value.trim();
+            UserDataStore.setCurrentUser(user);
+            renderAuthNav();
+            openProfileModal();
+            showToast('Profile updated successfully.', 'success');
+          }
         }
       });
     }
@@ -2142,9 +2342,10 @@ Rules:
     const logoutBtn = document.getElementById('profile-logout-btn');
     if (logoutBtn) {
       logoutBtn.addEventListener('click', () => {
-        setCurrentUser(null);
+        UserDataStore.setCurrentUser(null);
         closeModal('profile-modal');
-        showToast('Logged out successfully.', 'success');
+        reloadAppStateForUser();
+        showToast('Logged out. Guest activity is not saved permanently.', 'success');
       });
     }
   }
