@@ -12,11 +12,15 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY ||
+                 process.env.open_ai_key ||
+                 process.env.OPEN_AI_KEY ||
+                 process.env.openai_key ||
+                 process.env.API_KEY;
 
   if (!apiKey) {
     return res.status(500).json({
-      error: 'OPENAI_API_KEY is not set in Vercel Environment Variables. Please add it in Vercel Settings -> Environment Variables.'
+      error: 'OPENAI_API_KEY or open_ai_key is not set in Vercel Environment Variables.'
     });
   }
 
