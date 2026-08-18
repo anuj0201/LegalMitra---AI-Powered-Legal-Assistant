@@ -1488,8 +1488,8 @@ Formatting Rules:
   }
 
   async function fetchAndRenderNews(feedCategory) {
-    const grid = document.getElementById('news-grid');
-    if (!grid) return;
+    const container = document.getElementById('news-editorial-container') || document.getElementById('news-grid');
+    if (!container) return;
 
     // If cached, render immediately
     if (newsCache[feedCategory] && newsCache[feedCategory].length > 0) {
@@ -1497,10 +1497,10 @@ Formatting Rules:
       return;
     }
 
-    grid.innerHTML = `
-      <div class="news-loading">
+    container.innerHTML = `
+      <div class="news-loading" id="news-loading">
         <div class="loading-spinner"></div>
-        <p class="loading-text">Fetching latest ${NEWS_FEEDS[feedCategory]?.label || 'news'}...</p>
+        <p class="loading-text">Fetching latest ${NEWS_FEEDS[feedCategory]?.label || 'legal dispatches'}...</p>
       </div>
     `;
 
@@ -1514,18 +1514,16 @@ Formatting Rules:
       const data = await response.json();
 
       if (data.items && data.items.length > 0) {
-        const articles = data.items.slice(0, 9).map(item => {
+        const articles = data.items.slice(0, 15).map(item => {
           let cleanTitle = item.title || '';
           let source = item.author || '';
 
-          // Google News title format: "Article Title - Source Name"
           if (cleanTitle.includes(' - ')) {
             const parts = cleanTitle.split(' - ');
             source = parts.pop();
             cleanTitle = parts.join(' - ');
           }
 
-          // Description cleanup
           let cleanDesc = item.description || '';
           const tempDiv = document.createElement('div');
           tempDiv.innerHTML = cleanDesc;
@@ -1536,8 +1534,8 @@ Formatting Rules:
             description: cleanDesc,
             url: item.link,
             image: item.thumbnail || (item.enclosure ? item.enclosure.link : null),
-            source: source || 'News',
-            pubDate: item.pubDate
+            source: source || 'Legal Gazette',
+            pubDate: item.pubDate || new Date().toISOString()
           };
         });
 
@@ -1548,58 +1546,188 @@ Formatting Rules:
       }
     } catch (err) {
       console.warn('News fetch error, using fallback curated news:', err);
-      const fallbackArticles = feedInfo.fallback.map(f => ({
+      const fallbackArticles = feedInfo.fallback.map((f, idx) => ({
         ...f,
         url: f.link,
-        image: null
+        image: null,
+        pubDate: new Date(Date.now() - (idx * 18 * 60 * 1000)).toISOString()
       }));
       newsCache[feedCategory] = fallbackArticles;
       renderNewsGrid(fallbackArticles, feedCategory);
     }
   }
 
+  function formatRelativeTime(isoString) {
+    if (!isoString) return 'Today';
+    try {
+      const date = new Date(isoString);
+      const now = new Date();
+      const diffSec = Math.max(0, Math.floor((now - date) / 1000));
+
+      if (diffSec < 120) return 'Just now';
+      if (diffSec < 3600) return `${Math.floor(diffSec / 60)} mins ago`;
+      if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} hours ago`;
+      if (diffSec < 172800) return 'Yesterday';
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    } catch (e) {
+      return 'Today';
+    }
+  }
+
   function renderNewsGrid(articles, category) {
-    const grid = document.getElementById('news-grid');
-    if (!grid) return;
+    const container = document.getElementById('news-editorial-container') || document.getElementById('news-grid');
+    if (!container) return;
 
     if (!articles || articles.length === 0) {
-      grid.innerHTML = '<div class="news-empty"><p>No news articles found at this moment.</p></div>';
+      container.innerHTML = '<div class="news-empty"><p>No news articles found at this moment.</p></div>';
       return;
     }
 
-    grid.innerHTML = '';
+    // Update Live Ticker Bar
+    const tickerText = document.getElementById('live-ticker-text');
+    const tickerTime = document.getElementById('live-ticker-time');
+    if (tickerText && articles[0]) {
+      tickerText.innerHTML = `<strong>${escapeHtml(articles[0].source)}:</strong> ${escapeHtml(articles[0].title)}`;
+    }
+    if (tickerTime && articles[0]) {
+      tickerTime.textContent = formatRelativeTime(articles[0].pubDate);
+    }
+
     const feedInfo = NEWS_FEEDS[category] || NEWS_FEEDS.legal;
 
-    articles.forEach(article => {
-      const card = document.createElement('a');
-      card.className = 'news-card';
-      card.href = article.url || article.link || '#';
-      card.target = '_blank';
-      card.rel = 'noopener noreferrer';
+    // Split stories for Editorial 3-Column Broadside Frontpage
+    const leadStory = articles[0];
+    const leftStories = articles.slice(1, 3);
+    const subCenterStories = articles.slice(3, 5);
+    const trendingStories = articles.slice(5, 10);
+    const moreStories = articles.slice(10);
 
-      const timeFormatted = article.pubDate ? formatTimestamp(article.pubDate) : 'Today';
+    // Default high-contrast fallback image for legal journalism
+    const defaultLeadImg = 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1000&q=80';
+    const defaultSubImg1 = 'https://images.unsplash.com/photo-1505664194779-8beaceb93744?auto=format&fit=crop&w=600&q=80';
+    const defaultSubImg2 = 'https://images.unsplash.com/photo-1453728013993-6d66e9c9123a?auto=format&fit=crop&w=600&q=80';
 
-      const imgHtml = article.image
-        ? `<div class="news-card-img-wrap"><img src="${escapeHtml(article.image)}" alt="${escapeHtml(article.title)}" class="news-card-img" onerror="this.parentElement.innerHTML='<span class=\\'news-card-icon\\'>${feedInfo.icon}</span>'"/></div>`
-        : `<div class="news-card-img-wrap"><span class="news-card-icon">${feedInfo.icon}</span></div>`;
+    let html = `
+      <div class="editorial-frontpage">
+        <!-- Left Column: Editorial Dispatches & Newsletter -->
+        <div class="editorial-col editorial-col-left">
+          ${leftStories.map(story => `
+            <a href="${escapeHtml(story.url)}" target="_blank" rel="noopener noreferrer" class="editorial-dispatch-card">
+              <div class="dispatch-meta">
+                <span class="dispatch-source">${escapeHtml(story.source)}</span>
+                <span class="dispatch-time">${formatRelativeTime(story.pubDate)}</span>
+              </div>
+              <h3 class="dispatch-title">${escapeHtml(story.title)}</h3>
+              <p class="dispatch-desc">${escapeHtml(story.description || 'Full legal briefing and analysis available.')}</p>
+            </a>
+          `).join('')}
 
-      card.innerHTML = `
-        ${imgHtml}
-        <div class="news-card-body">
-          <div class="news-meta">
-            <span class="news-source">${escapeHtml(article.source)}</span>
-            <span>${timeFormatted}</span>
+          <!-- Newsletter Box matching reference image -->
+          <div class="editorial-subscribe-box">
+            <h4>Subscribe to Daily Gazette</h4>
+            <p>Curated Supreme Court digests &amp; statutory notifications every morning.</p>
+            <div class="subscribe-input-row">
+              <input type="email" placeholder="Enter your email" class="chat-input subscribe-input" id="gazette-email-input" />
+              <button class="subscribe-btn" onclick="showToast('Subscribed to Daily Legal Gazette!', 'success')">→</button>
+            </div>
           </div>
-          <h3 class="news-title">${escapeHtml(article.title)}</h3>
-          <p class="news-desc">${escapeHtml(article.description || 'Click to read the complete article and latest legal updates.')}</p>
-          <div class="news-footer">
-            <span class="news-read-more">Read full story ↗</span>
+        </div>
+
+        <!-- Center Column: Main Lead Story + 2 Secondary Split Rows -->
+        <div class="editorial-col editorial-col-center">
+          ${leadStory ? `
+            <a href="${escapeHtml(leadStory.url)}" target="_blank" rel="noopener noreferrer" class="editorial-lead-card">
+              <div class="lead-img-wrap">
+                <span class="main-story-badge">MAIN STORY</span>
+                <img src="${escapeHtml(leadStory.image || defaultLeadImg)}" alt="${escapeHtml(leadStory.title)}" class="lead-img" onerror="this.src='${defaultLeadImg}'"/>
+              </div>
+              <h2 class="lead-title">${escapeHtml(leadStory.title)}</h2>
+              <p class="lead-desc">${escapeHtml(leadStory.description || 'In-depth analysis of legal ramifications and constitutional significance.')}</p>
+              <div class="lead-meta">
+                <span>By <strong>${escapeHtml(leadStory.source)}</strong></span>
+                <span>•</span>
+                <span>${formatRelativeTime(leadStory.pubDate)}</span>
+              </div>
+            </a>
+          ` : ''}
+
+          <!-- Secondary Sub-Story Split Rows -->
+          <div class="editorial-sub-stories">
+            ${subCenterStories.map((subStory, idx) => `
+              <a href="${escapeHtml(subStory.url)}" target="_blank" rel="noopener noreferrer" class="sub-story-row">
+                <div class="sub-story-thumb">
+                  <img src="${escapeHtml(subStory.image || (idx === 0 ? defaultSubImg1 : defaultSubImg2))}" alt="${escapeHtml(subStory.title)}" onerror="this.src='${defaultSubImg1}'"/>
+                </div>
+                <div class="sub-story-content">
+                  <h4 class="sub-story-title">${escapeHtml(subStory.title)}</h4>
+                  <p class="sub-story-desc">${escapeHtml(subStory.description)}</p>
+                  <div class="sub-story-meta">
+                    <span class="sub-source">${escapeHtml(subStory.source)}</span>
+                    <span>${formatRelativeTime(subStory.pubDate)}</span>
+                  </div>
+                </div>
+              </a>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Right Column: Numbered Trending Legal Updates Timeline -->
+        <div class="editorial-col editorial-col-right">
+          <div class="trending-header">
+            <span class="trending-tab active">TRENDING TOPIC</span>
+            <span class="trending-tab">LATEST UPDATE</span>
+          </div>
+          <div class="trending-list">
+            ${trendingStories.map((trend, i) => `
+              <a href="${escapeHtml(trend.url)}" target="_blank" rel="noopener noreferrer" class="trending-item">
+                <div class="trend-rank">#${i + 1}</div>
+                <div class="trend-content">
+                  <h4 class="trend-title">${escapeHtml(trend.title)}</h4>
+                  <div class="trend-meta">
+                    <span>${escapeHtml(trend.source)}</span>
+                    <span>•</span>
+                    <span>${formatRelativeTime(trend.pubDate)}</span>
+                  </div>
+                </div>
+              </a>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+
+    // More Stories Section
+    if (moreStories.length > 0) {
+      html += `
+        <div class="more-stories-section">
+          <div class="more-stories-header">
+            <h3>MORE TOP STORIES</h3>
+          </div>
+          <div class="more-stories-grid">
+            ${moreStories.map(story => `
+              <a href="${escapeHtml(story.url)}" target="_blank" rel="noopener noreferrer" class="news-card">
+                <div class="news-card-img-wrap">
+                  <img src="${escapeHtml(story.image || defaultSubImg1)}" alt="${escapeHtml(story.title)}" class="news-card-img" onerror="this.src='${defaultSubImg1}'"/>
+                </div>
+                <div class="news-card-body">
+                  <div class="news-meta">
+                    <span class="news-source">${escapeHtml(story.source)}</span>
+                    <span>${formatRelativeTime(story.pubDate)}</span>
+                  </div>
+                  <h3 class="news-title">${escapeHtml(story.title)}</h3>
+                  <p class="news-desc">${escapeHtml(story.description || 'Click to read full dispatch.')}</p>
+                  <div class="news-footer">
+                    <span class="news-read-more">Read full story ↗</span>
+                  </div>
+                </div>
+              </a>
+            `).join('')}
           </div>
         </div>
       `;
+    }
 
-      grid.appendChild(card);
-    });
+    container.innerHTML = html;
   }
 
   // ==========================================

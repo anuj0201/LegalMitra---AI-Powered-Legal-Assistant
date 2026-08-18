@@ -231,22 +231,36 @@
 </section>
 
 <!-- NEWS SECTION -->
+<!-- NEWS SECTION (EDITORIAL BROADSIDE & LIVE WIRE) -->
 <section class="section" id="news">
   <div class="container">
-    <div class="section-header">
-      <h2 class="section-title gradient-text">📰 Legal & General News</h2>
-      <p class="section-subtitle">Stay updated with the latest legal, judiciary, legislative, and general news from India.</p>
+    <!-- Masthead & Ticker -->
+    <div class="news-masthead">
+      <div class="news-live-ticker-bar">
+        <span class="live-ticker-badge"><span class="pulse-dot"></span> LIVE WIRE</span>
+        <div class="live-ticker-content" id="live-ticker-text">Loading latest legal dispatches...</div>
+        <span class="live-ticker-time" id="live-ticker-time">Today</span>
+      </div>
+      
+      <div class="section-header news-header-editorial">
+        <span class="editorial-kicker">THE DAILY LEGAL GAZETTE</span>
+        <h2 class="section-title">Judicial Dispatches &amp; Statutory News</h2>
+        <p class="section-subtitle">Real-time coverage of Supreme Court Constitution Benches, High Court rulings, and legislative enactments across India.</p>
+      </div>
+
+      <div class="news-tabs" id="news-tabs">
+        <button class="news-tab active" data-feed="legal">⚖️ Supreme Court &amp; Constitution</button>
+        <button class="news-tab" data-feed="judiciary">🏛️ High Courts &amp; Judiciary</button>
+        <button class="news-tab" data-feed="legislative">📜 Parliament &amp; Statutory Acts</button>
+        <button class="news-tab" data-feed="general">⚡ Real-Time Legal Wire</button>
+      </div>
     </div>
-    <div class="news-tabs" id="news-tabs">
-      <button class="news-tab active" data-feed="legal">⚖️ Legal</button>
-      <button class="news-tab" data-feed="judiciary">🏛️ Judiciary</button>
-      <button class="news-tab" data-feed="legislative">📜 Legislative</button>
-      <button class="news-tab" data-feed="general">🇮🇳 General</button>
-    </div>
-    <div class="news-grid" id="news-grid">
+
+    <!-- Editorial Front Page Container -->
+    <div id="news-editorial-container">
       <div class="news-loading" id="news-loading">
         <div class="loading-spinner"></div>
-        <p class="loading-text">Fetching latest news...</p>
+        <p class="loading-text">Fetching latest legal wire...</p>
       </div>
     </div>
   </div>
