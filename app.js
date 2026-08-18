@@ -80,17 +80,32 @@ Rules:
 - Structure longer responses with bullet points or numbered steps
 - If unsure about specific details, say so rather than guessing`,
 
-    CONSTITUTION_EXPLAINER: `You are LegalMitra, an AI that explains Indian Constitutional articles to common people. Given an article of the Indian Constitution, explain it in simple terms.
+    CONSTITUTION_EXPLAINER: `You are LegalMitra, an expert AI legal educator that explains Indian Constitutional articles to common citizens in simple, engaging terms.
 
-Rules:
-- Start with a one-line simple summary
-- Explain what the article means in practical, everyday terms
-- Give real-life examples of how this article affects citizens
-- Mention any landmark Supreme Court cases related to this article (if well-known)
-- Explain any important amendments related to this article
-- Use simple language — imagine explaining to a 15-year-old
-- Keep the explanation concise but comprehensive (200-400 words)
-- Use bullet points for key takeaways`
+Given an article of the Indian Constitution, provide a clear, structured breakdown:
+
+1. 💡 **Simple Summary (In Everyday Language)**:
+   - A 1-2 sentence plain-English explanation that anyone can immediately grasp.
+
+2. 🏛️ **Historical Background & Why It Was Brought**:
+   - Why the framers of the Constitution (Dr. B.R. Ambedkar and the Constituent Assembly) introduced this article.
+   - The historical injustices, colonial background, or socio-economic goals it was created to solve.
+
+3. 👥 **What It Means for You (Real-Life Citizen Rights & Applications)**:
+   - Practical, day-to-day impact on ordinary citizens.
+   - Practical scenarios or examples of how rights under this article protect people.
+
+4. ⚖️ **Landmark Supreme Court Cases & Key Amendments**:
+   - Famous judgments where the Supreme Court interpreted or expanded this article.
+   - Any major constitutional amendments that modified or added clauses to this article.
+
+5. 📌 **Key Takeaways & Exceptions**:
+   - Quick bullet points summarizing the core principles and any legal exceptions.
+
+Formatting Rules:
+- Use bold for key legal terms.
+- Use clear bullet points and short paragraphs.
+- Keep the language clear, insightful, accessible, and informative.`
   };
 
   // ==========================================
@@ -1702,19 +1717,22 @@ Rules:
       explainBtn.addEventListener('click', async () => {
         if (!currentArticleData) return;
 
-        explainBtn.textContent = 'Generating...';
+        explainBtn.textContent = '⏳ Generating Explanation...';
         explainBtn.disabled = true;
 
-        const prompt = `Explain Article ${currentArticleData.article}: ${currentArticleData.title}\n\nFull Text: ${currentArticleData.fullText}`;
+        const prompt = `Explain Article ${currentArticleData.article}: ${currentArticleData.title}\n\nFull Text:\n${currentArticleData.fullText}`;
         const explanation = await callGeminiAPI(prompt, SYSTEM_PROMPTS.CONSTITUTION_EXPLAINER);
 
         const aiContainer = document.getElementById('modal-ai-explanation');
         const aiText = document.getElementById('modal-explanation-text');
 
         if (explanation) {
-          if (aiContainer) aiContainer.style.display = 'block';
+          if (aiContainer) {
+            aiContainer.classList.remove('hidden');
+            aiContainer.style.display = 'block';
+          }
           if (aiText) aiText.innerHTML = formatMarkdown(explanation);
-          explainBtn.textContent = 'Explanation Generated';
+          explainBtn.textContent = '✨ Explanation Generated';
 
           const history = UserDataStore.getData('articles');
           history.unshift({
@@ -1726,8 +1744,12 @@ Rules:
           });
           UserDataStore.saveData('articles', history);
           renderHistory();
+
+          setTimeout(() => {
+            if (aiContainer) aiContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }, 100);
         } else {
-          explainBtn.textContent = 'Explain in Simple Terms';
+          explainBtn.textContent = '🤖 Explain in Simple Terms';
           explainBtn.disabled = false;
         }
       });
