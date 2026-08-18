@@ -1939,9 +1939,57 @@ Rules:
     }
   }
 
-  function saveChatSessions() {
-    UserDataStore.saveData('chats', chatSessions);
-    renderHistory();
+  // ==========================================
+  // HISTORY SECTION
+  // ==========================================
+  let activeHistoryTab = 'documents';
+
+  function initHistory() {
+    const tabs = document.querySelectorAll('#history-tabs .history-tab');
+    const clearBtn = document.getElementById('clear-history-btn');
+
+    const detailClose = document.getElementById('history-detail-close');
+    if (detailClose) detailClose.addEventListener('click', () => closeModal('history-detail-modal'));
+
+    if (tabs) {
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          tabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          activeHistoryTab = tab.dataset.tab;
+          renderHistory();
+        });
+      });
+    }
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        if (confirm(`Are you sure you want to clear all ${activeHistoryTab} history?`)) {
+          if (activeHistoryTab === 'documents') {
+            UserDataStore.clearData('documents');
+          } else if (activeHistoryTab === 'chats') {
+            chatSessions = [];
+            UserDataStore.clearData('chats');
+            const chatMessagesContainer = document.getElementById('chat-messages');
+            if (chatMessagesContainer) {
+              const bubbles = chatMessagesContainer.querySelectorAll('.message');
+              bubbles.forEach(b => b.remove());
+              const welcome = document.getElementById('chat-welcome');
+              const suggestions = document.getElementById('suggested-questions');
+              if (welcome) welcome.style.display = 'block';
+              if (suggestions) suggestions.style.display = 'flex';
+            }
+            const list = document.getElementById('sidebar-chat-list');
+            if (list) list.innerHTML = '<div class="sidebar-empty-text">No previous chats</div>';
+          } else if (activeHistoryTab === 'articles') {
+            UserDataStore.clearData('articles');
+          }
+
+          renderHistory();
+          showToast('History cleared.', 'success');
+        }
+      });
+    }
   }
 
   function renderHistory() {
