@@ -280,18 +280,9 @@ Rules:
   }
 
   // ==========================================
-  // OPENAI API INTEGRATION
+  // OPENAI API INTEGRATION (HYBRID SERVERLESS + CLIENT)
   // ==========================================
   async function callGeminiAPI(prompt, systemInstruction, conversationHistory = []) {
-    const apiKey = getApiKey();
-    if (!apiKey) {
-      showToast('Please configure your OpenAI API key first.', 'warning');
-      openModal('api-modal');
-      return null;
-    }
-
-    const url = 'https://api.openai.com/v1/chat/completions';
-
     const messages = [
       { role: 'system', content: systemInstruction },
       ...conversationHistory.map(msg => ({
@@ -307,6 +298,34 @@ Rules:
       temperature: 0.7,
       max_tokens: 4096
     };
+
+    // 1. Try Vercel Serverless Function first (Uses process.env.OPENAI_API_KEY)
+    try {
+      const serverlessRes = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      if (serverlessRes.ok) {
+        const data = await serverlessRes.json();
+        if (data.choices?.[0]?.message?.content) {
+          return data.choices[0].message.content;
+        }
+      }
+    } catch (e) {
+      // Serverless not available or local static server, proceed to client fallback
+    }
+
+    // 2. Direct Client-side Fallback
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      showToast('Please configure your OpenAI API key or set OPENAI_API_KEY in Vercel.', 'warning');
+      openModal('api-modal');
+      return null;
+    }
+
+    const url = 'https://api.openai.com/v1/chat/completions';
 
     try {
       const response = await fetch(url, {
@@ -334,15 +353,6 @@ Rules:
 
   // Vision API for image-based document processing (Hindi PDFs, scanned docs)
   async function callVisionAPI(base64Images, systemInstruction) {
-    const apiKey = getApiKey();
-    if (!apiKey) {
-      showToast('Please configure your OpenAI API key first.', 'warning');
-      openModal('api-modal');
-      return null;
-    }
-
-    const url = 'https://api.openai.com/v1/chat/completions';
-
     const userContent = [
       { type: 'text', text: 'Please read and simplify this legal document. Follow the system instructions carefully.' }
     ];
@@ -371,6 +381,34 @@ Rules:
       temperature: 0.7,
       max_tokens: 4096
     };
+
+    // 1. Try Vercel Serverless Function first
+    try {
+      const serverlessRes = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      if (serverlessRes.ok) {
+        const data = await serverlessRes.json();
+        if (data.choices?.[0]?.message?.content) {
+          return data.choices[0].message.content;
+        }
+      }
+    } catch (e) {
+      // Proceed to client fallback
+    }
+
+    // 2. Direct Client Fallback
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      showToast('Please configure your OpenAI API key or set OPENAI_API_KEY in Vercel.', 'warning');
+      openModal('api-modal');
+      return null;
+    }
+
+    const url = 'https://api.openai.com/v1/chat/completions';
 
     try {
       const response = await fetch(url, {
