@@ -1363,15 +1363,12 @@ Formatting Rules:
   const NEWS_FEEDS = {
     legal: {
       label: 'Supreme Court & Constitution',
-      rssUrls: [
-        'https://www.barandbench.com/feed',
-        'https://www.thehindu.com/news/national/feeder/default.rss'
-      ],
+      rssUrls: ['https://www.barandbench.com/feed'],
       icon: '⚖️',
       fallback: [
         {
           title: 'Supreme Court Constitution Bench hears arguments on digital privacy and statutory compliance',
-          description: 'The 5-judge Constitution Bench held extensive hearings today regarding the intersection of Article 21 fundamental rights and automated data processing protocols.',
+          description: 'The 5-judge Constitution Bench held extensive hearings today regarding Article 21 fundamental rights.',
           source: 'Bar & Bench',
           image: 'https://cf-images.assettype.com/barandbench/2022-01/d9b62d33-af83-4c84-8deb-5646589abace/SUPREME_COURT_OF_INDIA__WEB_PAGE_1600x900___Copy.jpg?w=1200',
           pubDate: new Date(Date.now() - 24 * 60 * 1000).toISOString(),
@@ -1379,7 +1376,7 @@ Formatting Rules:
         },
         {
           title: 'Trial courts across all states instructed to implement standardized digital evidence filing',
-          description: 'The Supreme Court issued updated directives under the Bharatiya Nagarik Suraksha Sanhita to ensure rapid electronic tracking and bail transparency.',
+          description: 'Directives issued under the Bharatiya Nagarik Suraksha Sanhita to ensure rapid electronic tracking.',
           source: 'Bar & Bench',
           image: 'https://cf-images.assettype.com/barandbench/2021-06/38dcf69d-fbbc-4279-b6a0-f4c576da7326/Tarun_Tejpal_and_Supreme_Court.jpg?w=1200',
           pubDate: new Date(Date.now() - 55 * 60 * 1000).toISOString(),
@@ -1389,15 +1386,12 @@ Formatting Rules:
     },
     judiciary: {
       label: 'High Courts & Judiciary',
-      rssUrls: [
-        'https://www.barandbench.com/feed',
-        'https://www.thehindu.com/news/national/feeder/default.rss'
-      ],
+      rssUrls: ['https://www.thehindu.com/news/national/feeder/default.rss'],
       icon: '🏛️',
       fallback: [
         {
           title: 'High Courts scale up live stream telecasts across remote district bench complexes',
-          description: 'Judicial modernization under e-Courts Phase III connects district court complexes to high-speed virtual infrastructure for transparent open hearings.',
+          description: 'Judicial modernization under e-Courts Phase III connects district court complexes to virtual hearings.',
           source: 'The Hindu',
           image: 'https://th-i.thgim.com/public/incoming/yxbljm/article71361552.ece/alternates/LANDSCAPE_1200/2699_18_8_2026_20_8_8_3_19HUBLIBANDOBAST.JPG',
           pubDate: new Date(Date.now() - 38 * 60 * 1000).toISOString(),
@@ -1407,15 +1401,12 @@ Formatting Rules:
     },
     legislative: {
       label: 'Parliament & Statutory Acts',
-      rssUrls: [
-        'https://www.hindustantimes.com/feeds/rss/india-news/rssfeed.xml',
-        'https://www.thehindu.com/news/national/feeder/default.rss'
-      ],
+      rssUrls: ['https://www.hindustantimes.com/feeds/rss/india-news/rssfeed.xml'],
       icon: '📜',
       fallback: [
         {
           title: 'Parliamentary Committee reviews fast-track consumer dispute mediation framework',
-          description: 'The Standing Committee recommended institutionalizing online dispute resolution to settle e-commerce and consumer grievances within 90 days.',
+          description: 'Standing Committee recommended institutionalizing online dispute resolution to settle claims within 90 days.',
           source: 'Hindustan Times',
           image: 'https://www.hindustantimes.com/ht-img/img/2026/08/18/1600x900/The-Ritabrata-Banerjee-led-group-has-sought-Electi_1787053552491_1787053562767_1f239833-bc14-4b27-a38b-bcb85b9293b4.jpg',
           pubDate: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
@@ -1425,15 +1416,12 @@ Formatting Rules:
     },
     general: {
       label: 'Real-Time Legal Wire',
-      rssUrls: [
-        'https://feeds.feedburner.com/ndtvnews-india-news',
-        'https://www.barandbench.com/feed'
-      ],
+      rssUrls: ['https://feeds.feedburner.com/ndtvnews-india-news'],
       icon: '⚡',
       fallback: [
         {
           title: 'National Legal Services Authority (NALSA) expands free legal aid clinics across 500 districts',
-          description: 'Over 200,000 citizens received pre-litigation counseling and settlement assistance this week through digital Lok Adalats and legal clinic desks.',
+          description: 'Over 200,000 citizens received pre-litigation counseling and settlement assistance this week.',
           source: 'NDTV',
           image: 'https://c.ndtvimg.com/2022-01/2ft3pm08_arvind-kejriwal-satyendar-jain-pti_625x300_23_January_22.jpg',
           pubDate: new Date(Date.now() - 18 * 60 * 1000).toISOString(),
@@ -1445,6 +1433,31 @@ Formatting Rules:
 
   let activeNewsFeed = 'legal';
   let newsCache = {};
+
+  function cleanSource(rawSource) {
+    if (!rawSource) return 'Legal Gazette';
+    const lower = String(rawSource).toLowerCase();
+    if (lower.includes('bar & bench') || lower.includes('bar and bench')) return 'Bar & Bench';
+    if (lower.includes('hindu')) return 'The Hindu';
+    if (lower.includes('hindustan times') || lower.includes('ht')) return 'Hindustan Times';
+    if (lower.includes('ndtv')) return 'NDTV';
+    if (lower.includes('livelaw') || lower.includes('live law')) return 'LiveLaw';
+    if (lower.includes('express')) return 'Indian Express';
+    if (lower.includes('times of india') || lower.includes('toi')) return 'Times of India';
+    if (rawSource.includes('|')) return rawSource.split('|').pop().trim();
+    if (rawSource.includes('-')) return rawSource.split('-').pop().trim();
+    return rawSource.length > 20 ? rawSource.slice(0, 18) : rawSource;
+  }
+
+  function cleanSummary(rawText, maxLen = 140) {
+    if (!rawText) return 'Full legal reporting and case details available.';
+    let text = String(rawText).replace(/<[^>]*>?/gm, '').trim();
+    text = text.replace(/\s+/g, ' ');
+    if (text.length > maxLen) {
+      return text.slice(0, maxLen).trim() + '...';
+    }
+    return text;
+  }
 
   function extractArticleImage(item) {
     let img = '';
@@ -1513,9 +1526,10 @@ Formatting Rules:
           const data = await response.json();
 
           if (data.items && data.items.length > 0) {
+            const feedTitle = data.feed?.title || '';
             const parsed = data.items.map(item => {
               let cleanTitle = item.title || '';
-              let source = item.author || data.feed?.title || 'Legal Gazette';
+              let source = item.author || feedTitle || 'Legal Gazette';
 
               if (cleanTitle.includes(' - ')) {
                 const parts = cleanTitle.split(' - ');
@@ -1523,19 +1537,14 @@ Formatting Rules:
                 cleanTitle = parts.join(' - ');
               }
 
-              let cleanDesc = item.description || '';
-              const tempDiv = document.createElement('div');
-              tempDiv.innerHTML = cleanDesc;
-              cleanDesc = tempDiv.textContent || tempDiv.innerText || '';
-
               const realImage = extractArticleImage(item);
 
               return {
-                title: cleanTitle,
-                description: cleanDesc,
+                title: cleanTitle.trim(),
+                description: cleanSummary(item.description || item.content || '', 140),
                 url: item.link,
                 image: realImage,
-                source: source,
+                source: cleanSource(source),
                 pubDate: item.pubDate || new Date().toISOString()
               };
             });
@@ -1572,6 +1581,8 @@ Formatting Rules:
       const fallbackArticles = feedInfo.fallback.map((f, idx) => ({
         ...f,
         url: f.link,
+        source: cleanSource(f.source),
+        description: cleanSummary(f.description, 140),
         pubDate: new Date(Date.now() - (idx * 22 * 60 * 1000)).toISOString()
       }));
       newsCache[feedCategory] = { data: fallbackArticles, timestamp: Date.now() };
@@ -1636,7 +1647,7 @@ Formatting Rules:
                 <span class="dispatch-time">${formatRelativeTime(story.pubDate)}</span>
               </div>
               <h3 class="dispatch-title">${escapeHtml(story.title)}</h3>
-              <p class="dispatch-desc">${escapeHtml(story.description || 'Full legal briefing and analysis available.')}</p>
+              <p class="dispatch-desc">${escapeHtml(cleanSummary(story.description, 110))}</p>
             </a>
           `).join('')}
         </div>
@@ -1654,7 +1665,7 @@ Formatting Rules:
                 <span class="main-story-badge" style="position:static; display:inline-block; margin-bottom: 0.75rem;">MAIN STORY</span>
               `}
               <h2 class="lead-title">${escapeHtml(leadStory.title)}</h2>
-              <p class="lead-desc">${escapeHtml(leadStory.description || 'In-depth analysis of legal ramifications and constitutional significance.')}</p>
+              <p class="lead-desc">${escapeHtml(cleanSummary(leadStory.description, 150))}</p>
               <div class="lead-meta">
                 <span>By <strong>${escapeHtml(leadStory.source)}</strong></span>
                 <span>•</span>
@@ -1666,7 +1677,7 @@ Formatting Rules:
           <!-- Secondary Sub-Story Split Rows -->
           <div class="editorial-sub-stories">
             ${subCenterStories.map(subStory => `
-              <a href="${escapeHtml(subStory.url)}" target="_blank" rel="noopener noreferrer" class="sub-story-row">
+              <a href="${escapeHtml(subStory.url)}" target="_blank" rel="noopener noreferrer" class="sub-story-row ${subStory.image ? '' : 'no-thumb'}">
                 ${subStory.image ? `
                   <div class="sub-story-thumb">
                     <img src="${escapeHtml(subStory.image)}" alt="${escapeHtml(subStory.title)}"/>
@@ -1674,7 +1685,7 @@ Formatting Rules:
                 ` : ''}
                 <div class="sub-story-content">
                   <h4 class="sub-story-title">${escapeHtml(subStory.title)}</h4>
-                  <p class="sub-story-desc">${escapeHtml(subStory.description)}</p>
+                  <p class="sub-story-desc">${escapeHtml(cleanSummary(subStory.description, 90))}</p>
                   <div class="sub-story-meta">
                     <span class="sub-source">${escapeHtml(subStory.source)}</span>
                     <span>${formatRelativeTime(subStory.pubDate)}</span>
@@ -1732,7 +1743,7 @@ Formatting Rules:
                     <span>${formatRelativeTime(story.pubDate)}</span>
                   </div>
                   <h3 class="news-title">${escapeHtml(story.title)}</h3>
-                  <p class="news-desc">${escapeHtml(story.description || 'Click to read full dispatch.')}</p>
+                  <p class="news-desc">${escapeHtml(cleanSummary(story.description, 110))}</p>
                   <div class="news-footer">
                     <span class="news-read-more">Read full story ↗</span>
                   </div>

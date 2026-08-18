@@ -1544,6 +1544,10 @@ a:hover {
   align-items: start;
 }
 
+.sub-story-row.no-thumb {
+  display: block;
+}
+
 .sub-story-row:last-child {
   border-bottom: none;
 }
@@ -1555,12 +1559,17 @@ a:hover {
   overflow: hidden;
   background: var(--bg-subtle);
   border: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .sub-story-thumb img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.sub-story-content {
+  min-width: 0;
 }
 
 .sub-story-title {
@@ -1587,16 +1596,19 @@ a:hover {
   margin-bottom: 0.25rem;
 }
 
-.sub-story-meta {
+.sub-story-meta, .dispatch-meta, .lead-meta, .news-meta, .trend-meta {
   display: flex;
-  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
   font-size: 0.72rem;
   color: var(--text-dim);
 }
 
-.sub-source {
-  font-weight: 600;
+.sub-source, .dispatch-source, .news-source {
+  font-weight: 700;
   color: var(--accent);
+  white-space: nowrap;
 }
 
 /* Right Column: Numbered Trending Topics Timeline */
