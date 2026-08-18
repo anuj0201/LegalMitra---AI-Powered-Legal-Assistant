@@ -312,15 +312,22 @@ Rules:
         if (data.choices?.[0]?.message?.content) {
           return data.choices[0].message.content;
         }
+      } else if (serverlessRes.status !== 404) {
+        // If serverless responded with 400/500, read the error message
+        const errData = await serverlessRes.json().catch(() => ({}));
+        const errMsg = errData.error || `Serverless Error (${serverlessRes.status})`;
+        console.error('Serverless Error:', errMsg);
+        showToast(errMsg, 'error');
+        return null;
       }
     } catch (e) {
-      // Serverless not available or local static server, proceed to client fallback
+      // Serverless fetch error (e.g. running offline on local static server)
     }
 
     // 2. Direct Client-side Fallback
     const apiKey = getApiKey();
     if (!apiKey) {
-      showToast('Please configure your OpenAI API key or set OPENAI_API_KEY in Vercel.', 'warning');
+      showToast('Please set OPENAI_API_KEY in Vercel Environment Variables or configure a key.', 'warning');
       openModal('api-modal');
       return null;
     }
@@ -338,8 +345,8 @@ Rules:
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error?.message || 'API call failed');
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error?.message || `API call failed (${response.status})`);
       }
 
       const data = await response.json();
@@ -395,6 +402,12 @@ Rules:
         if (data.choices?.[0]?.message?.content) {
           return data.choices[0].message.content;
         }
+      } else if (serverlessRes.status !== 404) {
+        const errData = await serverlessRes.json().catch(() => ({}));
+        const errMsg = errData.error || `Serverless Error (${serverlessRes.status})`;
+        console.error('Serverless Vision Error:', errMsg);
+        showToast(errMsg, 'error');
+        return null;
       }
     } catch (e) {
       // Proceed to client fallback
@@ -403,7 +416,7 @@ Rules:
     // 2. Direct Client Fallback
     const apiKey = getApiKey();
     if (!apiKey) {
-      showToast('Please configure your OpenAI API key or set OPENAI_API_KEY in Vercel.', 'warning');
+      showToast('Please set OPENAI_API_KEY in Vercel Environment Variables or configure a key.', 'warning');
       openModal('api-modal');
       return null;
     }
@@ -421,8 +434,8 @@ Rules:
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error?.message || 'API call failed');
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error?.message || `Vision API call failed (${response.status})`);
       }
 
       const data = await response.json();

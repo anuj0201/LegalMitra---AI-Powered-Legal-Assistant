@@ -1,4 +1,13 @@
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
+  // Enable CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
@@ -7,18 +16,31 @@ export default async function handler(req, res) {
 
   if (!apiKey) {
     return res.status(500).json({
-      error: 'OPENAI_API_KEY environment variable is not configured in Vercel settings.'
+      error: 'OPENAI_API_KEY is not set in Vercel Environment Variables. Please add it in Vercel Settings -> Environment Variables.'
     });
   }
 
   try {
-    const { messages, model = 'gpt-4o-mini', temperature = 0.7, max_tokens = 4096 } = req.body;
+    let body = req.body;
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch (e) {
+        body = {};
+      }
+    }
+
+    const { messages, model = 'gpt-4o-mini', temperature = 0.7, max_tokens = 4096 } = body || {};
+
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: 'Invalid or missing messages array in request body.' });
+    }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${apiKey.trim()}`
       },
       body: JSON.stringify({
         model,
@@ -41,4 +63,4 @@ export default async function handler(req, res) {
     console.error('Serverless API Error:', error);
     return res.status(500).json({ error: error.message || 'Internal Server Error' });
   }
-}
+};
