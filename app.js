@@ -994,62 +994,20 @@ Rules:
         }
       });
     }
-
-    function saveDocHistory(filename, excerpt, simplified) {
-      const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.DOC) || '[]');
-      history.unshift({
-        id: generateId(),
-        filename,
-        excerpt,
-        simplified,
-        timestamp: new Date().toISOString()
-      });
-      localStorage.setItem(STORAGE_KEYS.DOC, JSON.stringify(history));
-      renderHistory();
-    }
   }
 
   // ==========================================
   // LEGAL CHAT (CLAUDE-STYLE SIDEBAR + SESSIONS)
   // ==========================================
   function loadChatSessions() {
-    const stored = localStorage.getItem(STORAGE_KEYS.CHAT_SESSIONS);
-    if (stored) {
-      try {
-        chatSessions = JSON.parse(stored);
-      } catch (e) {
-        chatSessions = [];
-      }
+    chatSessions = UserDataStore.getData('chats');
+    if (!Array.isArray(chatSessions)) {
+      chatSessions = [];
     }
-
-    // Migrate old single chat format if sessions are empty
-    if (!chatSessions || chatSessions.length === 0) {
-      const oldChat = localStorage.getItem(STORAGE_KEYS.OLD_CHAT);
-      if (oldChat) {
-        try {
-          const oldMessages = JSON.parse(oldChat);
-          if (oldMessages && oldMessages.length > 0) {
-            const firstUser = oldMessages.find(m => m.role === 'user')?.content || 'Previous Conversation';
-            chatSessions = [{
-              id: generateId(),
-              title: firstUser.substring(0, 30),
-              messages: oldMessages,
-              createdAt: oldMessages[0]?.timestamp || new Date().toISOString(),
-              updatedAt: oldMessages[oldMessages.length - 1]?.timestamp || new Date().toISOString()
-            }];
-            saveChatSessions();
-          }
-        } catch (e) {
-          chatSessions = [];
-        }
-      }
-    }
-
-    if (!chatSessions) chatSessions = [];
   }
 
   function saveChatSessions() {
-    localStorage.setItem(STORAGE_KEYS.CHAT_SESSIONS, JSON.stringify(chatSessions));
+    UserDataStore.saveData('chats', chatSessions);
     localStorage.setItem(STORAGE_KEYS.ACTIVE_CHAT_ID, activeChatId || '');
     renderHistory();
   }
@@ -1745,7 +1703,7 @@ Rules:
     // Active session user
     getCurrentUser() {
       try {
-        const session = localStorage.getItem('LegalMitra_active_user') || sessionStorage.getItem('LegalMitra_active_user');
+        const session = localStorage.getItem('LegalMitra_active_user') || sessionStorage.getItem('LegalMitra_active_user') || localStorage.getItem(STORAGE_KEYS.USER);
         return session ? JSON.parse(session) : null;
       } catch (e) {
         return null;
@@ -1753,13 +1711,11 @@ Rules:
     },
     setCurrentUser(user, remember = true) {
       if (user) {
-        if (remember) {
-          localStorage.setItem('LegalMitra_active_user', JSON.stringify(user));
-        } else {
-          sessionStorage.setItem('LegalMitra_active_user', JSON.stringify(user));
-        }
+        localStorage.setItem('LegalMitra_active_user', JSON.stringify(user));
+        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
       } else {
         localStorage.removeItem('LegalMitra_active_user');
+        localStorage.removeItem(STORAGE_KEYS.USER);
         sessionStorage.removeItem('LegalMitra_active_user');
         sessionStorage.removeItem('LegalMitra_guest_data');
       }
@@ -1869,38 +1825,69 @@ Rules:
       this.setCurrentUser(user, true);
       return { success: true, user };
     },
-    // Isolated User Data Access
+    // Robust Data Access
     getData(type) { // 'documents' | 'chats' | 'articles'
       const currentUser = this.getCurrentUser();
       if (currentUser) {
         const db = this.getUsersDB();
-        const user = db[currentUser.email.toLowerCase()];
-        if (user && user.data && Array.isArray(user.data[type])) {
+        const cleanEmail = (currentUser.email || '').toLowerCase();
+        const user = db[cleanEmail];
+        if (user && user.data && Array.isArray(user.data[type]) && user.data[type].length > 0) {
           return user.data[type];
         }
-        return [];
-      } else {
-        // Guest mode: load only from temporary sessionStorage
-        try {
-          const guestData = JSON.parse(sessionStorage.getItem('LegalMitra_guest_data') || '{}');
-          return guestData[type] || [];
-        } catch (e) {
-          return [];
-        }
       }
+
+      // Standalone storage fallback
+      try {
+        let key = STORAGE_KEYS.DOC;
+        if (type === 'chats') key = STORAGE_KEYS.CHAT_SESSIONS;
+        if (type === 'articles') key = STORAGE_KEYS.ARTICLE;
+        const stored = JSON.parse(localStorage.getItem(key) || '[]');
+        if (Array.isArray(stored) && stored.length > 0) {
+          return stored;
+        }
+      } catch (e) {}
+
+      // Guest sessionStorage fallback
+      try {
+        const guestData = JSON.parse(sessionStorage.getItem('LegalMitra_guest_data') || '{}');
+        if (guestData && Array.isArray(guestData[type])) {
+          return guestData[type];
+        }
+      } catch (e) {}
+
+      return [];
     },
     saveData(type, items) {
       const currentUser = this.getCurrentUser();
       if (currentUser) {
         const db = this.getUsersDB();
-        const cleanEmail = currentUser.email.toLowerCase();
-        if (db[cleanEmail]) {
-          if (!db[cleanEmail].data) db[cleanEmail].data = {};
-          db[cleanEmail].data[type] = items;
-          this.saveUsersDB(db);
+        const cleanEmail = (currentUser.email || 'user@example.com').toLowerCase();
+        if (!db[cleanEmail]) {
+          db[cleanEmail] = {
+            id: currentUser.id || generateId(),
+            name: currentUser.name || 'User',
+            email: cleanEmail,
+            provider: currentUser.provider || 'email',
+            createdAt: new Date().toISOString(),
+            data: {}
+          };
         }
-      } else {
-        // Guest mode: save only to temporary sessionStorage (cleared on tab close)
+        if (!db[cleanEmail].data) db[cleanEmail].data = {};
+        db[cleanEmail].data[type] = items;
+        this.saveUsersDB(db);
+      }
+
+      // Always write to standalone keys for instant access
+      try {
+        let key = STORAGE_KEYS.DOC;
+        if (type === 'chats') key = STORAGE_KEYS.CHAT_SESSIONS;
+        if (type === 'articles') key = STORAGE_KEYS.ARTICLE;
+        localStorage.setItem(key, JSON.stringify(items));
+      } catch (e) {}
+
+      // If guest mode, also update sessionStorage
+      if (!currentUser) {
         try {
           const guestData = JSON.parse(sessionStorage.getItem('LegalMitra_guest_data') || '{}');
           guestData[type] = items;
@@ -1909,7 +1896,20 @@ Rules:
       }
     },
     clearData(type) {
-      this.saveData(type, []);
+      let key = STORAGE_KEYS.DOC;
+      if (type === 'chats') key = STORAGE_KEYS.CHAT_SESSIONS;
+      if (type === 'articles') key = STORAGE_KEYS.ARTICLE;
+      localStorage.removeItem(key);
+
+      const currentUser = this.getCurrentUser();
+      if (currentUser) {
+        const db = this.getUsersDB();
+        const cleanEmail = (currentUser.email || '').toLowerCase();
+        if (db[cleanEmail] && db[cleanEmail].data) {
+          db[cleanEmail].data[type] = [];
+          this.saveUsersDB(db);
+        }
+      }
     }
   };
 
