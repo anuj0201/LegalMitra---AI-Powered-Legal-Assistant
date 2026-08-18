@@ -1577,6 +1577,58 @@ Formatting Rules:
     }
   }
 
+  // Curated diverse legal photography covering courts, judges, parliament, technology, documents & justice
+  const LEGAL_STOCK_PHOTOS = [
+    'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=800&q=80', // Lady justice bronze
+    'https://images.unsplash.com/photo-1505664194779-8beaceb93744?auto=format&fit=crop&w=800&q=80', // Law library & desk
+    'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&w=800&q=80', // Law books & classic desk
+    'https://images.unsplash.com/photo-1453728013993-6d66e9c9123a?auto=format&fit=crop&w=800&q=80', // Modern architecture court
+    'https://images.unsplash.com/photo-1575505586569-646b2ca898fc?auto=format&fit=crop&w=800&q=80', // Gavel on courtroom wood
+    'https://images.unsplash.com/photo-1589578527966-fdac0f44566c?auto=format&fit=crop&w=800&q=80', // Legal document quill & seal
+    'https://images.unsplash.com/photo-1479142506502-19b3a3b7ff33?auto=format&fit=crop&w=800&q=80', // Supreme Court columns
+    'https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=800&q=80', // Parliament assembly hall
+    'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=800&q=80', // Cyber law & digital code
+    'https://images.unsplash.com/photo-1589391886645-d51941baf7fb?auto=format&fit=crop&w=800&q=80', // Gavel close up
+    'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=800&q=80', // Legal advocate conference
+    'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=800&q=80', // Contract agreement signing
+    'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80', // Corporate law glass tower
+    'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=800&q=80'  // Legal research study
+  ];
+
+  function getArticleCoverImage(article, index = 0) {
+    if (article.image && article.image.startsWith('http') && !article.image.includes('placeholder') && !article.image.includes('default')) {
+      return article.image;
+    }
+    const titleLower = (article.title || '').toLowerCase();
+    if (titleLower.includes('cyber') || titleLower.includes('data') || titleLower.includes('openai') || titleLower.includes('tech') || titleLower.includes('ai')) {
+      return LEGAL_STOCK_PHOTOS[8]; // Cyber law
+    }
+    if (titleLower.includes('parliament') || titleLower.includes('bill') || titleLower.includes('lok sabha') || titleLower.includes('rajya') || titleLower.includes('act')) {
+      return LEGAL_STOCK_PHOTOS[7]; // Parliament
+    }
+    if (titleLower.includes('bar association') || titleLower.includes('lawyer') || titleLower.includes('advocate') || titleLower.includes('president') || titleLower.includes('elected')) {
+      return LEGAL_STOCK_PHOTOS[10]; // Advocates
+    }
+    if (titleLower.includes('police') || titleLower.includes('crime') || titleLower.includes('hanging') || titleLower.includes('death penalty') || titleLower.includes('bail') || titleLower.includes('plea')) {
+      return LEGAL_STOCK_PHOTOS[4]; // Gavel
+    }
+    if (titleLower.includes('constitution') || titleLower.includes('verdict') || titleLower.includes('ruling') || titleLower.includes('bench')) {
+      return LEGAL_STOCK_PHOTOS[6]; // Court columns
+    }
+    if (titleLower.includes('contract') || titleLower.includes('agreement') || titleLower.includes('dispute') || titleLower.includes('trade')) {
+      return LEGAL_STOCK_PHOTOS[11]; // Document signing
+    }
+
+    // Varied hash allocation so each story gets a distinct photo
+    let hash = 0;
+    for (let i = 0; i < (article.title || '').length; i++) {
+      hash = (hash << 5) - hash + article.title.charCodeAt(i);
+      hash |= 0;
+    }
+    const pickedIndex = Math.abs(hash + index) % LEGAL_STOCK_PHOTOS.length;
+    return LEGAL_STOCK_PHOTOS[pickedIndex];
+  }
+
   function renderNewsGrid(articles, category) {
     const container = document.getElementById('news-editorial-container') || document.getElementById('news-grid');
     if (!container) return;
@@ -1600,19 +1652,15 @@ Formatting Rules:
 
     // Split stories for Editorial 3-Column Broadside Frontpage
     const leadStory = articles[0];
-    const leftStories = articles.slice(1, 3);
-    const subCenterStories = articles.slice(3, 5);
-    const trendingStories = articles.slice(5, 10);
-    const moreStories = articles.slice(10);
-
-    // Default high-contrast fallback image for legal journalism
-    const defaultLeadImg = 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1000&q=80';
-    const defaultSubImg1 = 'https://images.unsplash.com/photo-1505664194779-8beaceb93744?auto=format&fit=crop&w=600&q=80';
-    const defaultSubImg2 = 'https://images.unsplash.com/photo-1453728013993-6d66e9c9123a?auto=format&fit=crop&w=600&q=80';
+    const leftStories = articles.slice(1, 4);
+    const subCenterStories = articles.slice(4, 6);
+    const trendingStories = articles.slice(6, 11);
+    const latestStories = [...articles].sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime()).slice(0, 5);
+    const moreStories = articles.slice(11);
 
     let html = `
       <div class="editorial-frontpage">
-        <!-- Left Column: Editorial Dispatches & Newsletter -->
+        <!-- Left Column: Editorial Dispatches -->
         <div class="editorial-col editorial-col-left">
           ${leftStories.map(story => `
             <a href="${escapeHtml(story.url)}" target="_blank" rel="noopener noreferrer" class="editorial-dispatch-card">
@@ -1624,16 +1672,6 @@ Formatting Rules:
               <p class="dispatch-desc">${escapeHtml(story.description || 'Full legal briefing and analysis available.')}</p>
             </a>
           `).join('')}
-
-          <!-- Newsletter Box matching reference image -->
-          <div class="editorial-subscribe-box">
-            <h4>Subscribe to Daily Gazette</h4>
-            <p>Curated Supreme Court digests &amp; statutory notifications every morning.</p>
-            <div class="subscribe-input-row">
-              <input type="email" placeholder="Enter your email" class="chat-input subscribe-input" id="gazette-email-input" />
-              <button class="subscribe-btn" onclick="showToast('Subscribed to Daily Legal Gazette!', 'success')">→</button>
-            </div>
-          </div>
         </div>
 
         <!-- Center Column: Main Lead Story + 2 Secondary Split Rows -->
@@ -1642,7 +1680,7 @@ Formatting Rules:
             <a href="${escapeHtml(leadStory.url)}" target="_blank" rel="noopener noreferrer" class="editorial-lead-card">
               <div class="lead-img-wrap">
                 <span class="main-story-badge">MAIN STORY</span>
-                <img src="${escapeHtml(leadStory.image || defaultLeadImg)}" alt="${escapeHtml(leadStory.title)}" class="lead-img" onerror="this.src='${defaultLeadImg}'"/>
+                <img src="${escapeHtml(getArticleCoverImage(leadStory, 0))}" alt="${escapeHtml(leadStory.title)}" class="lead-img"/>
               </div>
               <h2 class="lead-title">${escapeHtml(leadStory.title)}</h2>
               <p class="lead-desc">${escapeHtml(leadStory.description || 'In-depth analysis of legal ramifications and constitutional significance.')}</p>
@@ -1659,7 +1697,7 @@ Formatting Rules:
             ${subCenterStories.map((subStory, idx) => `
               <a href="${escapeHtml(subStory.url)}" target="_blank" rel="noopener noreferrer" class="sub-story-row">
                 <div class="sub-story-thumb">
-                  <img src="${escapeHtml(subStory.image || (idx === 0 ? defaultSubImg1 : defaultSubImg2))}" alt="${escapeHtml(subStory.title)}" onerror="this.src='${defaultSubImg1}'"/>
+                  <img src="${escapeHtml(getArticleCoverImage(subStory, idx + 2))}" alt="${escapeHtml(subStory.title)}"/>
                 </div>
                 <div class="sub-story-content">
                   <h4 class="sub-story-title">${escapeHtml(subStory.title)}</h4>
@@ -1674,13 +1712,14 @@ Formatting Rules:
           </div>
         </div>
 
-        <!-- Right Column: Numbered Trending Legal Updates Timeline -->
+        <!-- Right Column: Interactive Numbered Trending / Latest Updates Timeline -->
         <div class="editorial-col editorial-col-right">
           <div class="trending-header">
-            <span class="trending-tab active">TRENDING TOPIC</span>
-            <span class="trending-tab">LATEST UPDATE</span>
+            <button class="trending-tab-btn active" id="right-tab-trending">TRENDING TOPIC</button>
+            <button class="trending-tab-btn" id="right-tab-latest">LATEST UPDATE</button>
           </div>
-          <div class="trending-list">
+          
+          <div class="trending-list" id="right-stories-list">
             ${trendingStories.map((trend, i) => `
               <a href="${escapeHtml(trend.url)}" target="_blank" rel="noopener noreferrer" class="trending-item">
                 <div class="trend-rank">#${i + 1}</div>
@@ -1707,10 +1746,10 @@ Formatting Rules:
             <h3>MORE TOP STORIES</h3>
           </div>
           <div class="more-stories-grid">
-            ${moreStories.map(story => `
+            ${moreStories.map((story, idx) => `
               <a href="${escapeHtml(story.url)}" target="_blank" rel="noopener noreferrer" class="news-card">
                 <div class="news-card-img-wrap">
-                  <img src="${escapeHtml(story.image || defaultSubImg1)}" alt="${escapeHtml(story.title)}" class="news-card-img" onerror="this.src='${defaultSubImg1}'"/>
+                  <img src="${escapeHtml(getArticleCoverImage(story, idx + 5))}" alt="${escapeHtml(story.title)}" class="news-card-img"/>
                 </div>
                 <div class="news-card-body">
                   <div class="news-meta">
@@ -1731,6 +1770,51 @@ Formatting Rules:
     }
 
     container.innerHTML = html;
+
+    // Attach Interactive Trending vs Latest Tab Switcher
+    const tabTrending = document.getElementById('right-tab-trending');
+    const tabLatest = document.getElementById('right-tab-latest');
+    const listContainer = document.getElementById('right-stories-list');
+
+    if (tabTrending && tabLatest && listContainer) {
+      tabTrending.addEventListener('click', () => {
+        tabTrending.classList.add('active');
+        tabLatest.classList.remove('active');
+        listContainer.innerHTML = trendingStories.map((trend, i) => `
+          <a href="${escapeHtml(trend.url)}" target="_blank" rel="noopener noreferrer" class="trending-item">
+            <div class="trend-rank">#${i + 1}</div>
+            <div class="trend-content">
+              <h4 class="trend-title">${escapeHtml(trend.title)}</h4>
+              <div class="trend-meta">
+                <span>${escapeHtml(trend.source)}</span>
+                <span>•</span>
+                <span>${formatRelativeTime(trend.pubDate)}</span>
+              </div>
+            </div>
+          </a>
+        `).join('');
+      });
+
+      tabLatest.addEventListener('click', () => {
+        tabLatest.classList.add('active');
+        tabTrending.classList.remove('active');
+        listContainer.innerHTML = latestStories.map((latest, i) => `
+          <a href="${escapeHtml(latest.url)}" target="_blank" rel="noopener noreferrer" class="trending-item">
+            <div class="trend-rank" style="color: #dc2626;">⚡</div>
+            <div class="trend-content">
+              <h4 class="trend-title">${escapeHtml(latest.title)}</h4>
+              <div class="trend-meta">
+                <span style="color: #dc2626; font-weight: 600;">LIVE</span>
+                <span>•</span>
+                <span>${escapeHtml(latest.source)}</span>
+                <span>•</span>
+                <span>${formatRelativeTime(latest.pubDate)}</span>
+              </div>
+            </div>
+          </a>
+        `).join('');
+      });
+    }
   }
 
   // ==========================================
