@@ -1,11 +1,11 @@
 # ⚖️ LegalMitra — AI-Powered Legal Assistant
 
-[![Vercel Deployment](https://img.shields.io/badge/Deployment-Vercel-black?style=for-the-badge&logo=vercel)](YOUR_DEMO_LINK_HERE)
+[![Vercel Deployment](https://img.shields.io/badge/Deployment-Vercel-black?style=for-the-badge&logo=vercel)](https://legal-mitra-ai-powered-legal-assist.vercel.app/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 [![JavaScript](https://img.shields.io/badge/Vanilla_JS-ES6+-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org)
 [![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o_/_GPT--3.5-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com)
 
-> **Live Demo:** [YOUR_DEMO_LINK_HERE](YOUR_DEMO_LINK_HERE)
+> **Live Demo:** [LegalMitra](https://legal-mitra-ai-powered-legal-assist.vercel.app/)
 
 **LegalMitra** is a full-stack, enterprise-grade AI legal intelligence platform tailored for Indian jurisprudence. It democratizes legal access by simplifying complex legal documents, providing intelligent multi-turn advisory grounded in statutory law, exploring the Constitution of India, and delivering an editorial real-time legal dispatch wire.
 
