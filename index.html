@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LegalMitra — AI Law Assistant | Simplify Legal Documents &amp; Understand Indian Constitution</title>
+  <meta name="description" content="LegalMitra is your AI-powered legal companion. Upload legal documents for simplified explanations, get legal suggestions, and explore the Indian Constitution in simple terms.">
+  
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="LegalMitra — AI Law Assistant | Simplify Legal Documents &amp; Understand Indian Constitution">
+  <meta property="og:description" content="LegalMitra is your AI-powered legal companion. Upload legal documents for simplified explanations, get legal suggestions, and explore the Indian Constitution in simple terms.">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚖️</text></svg>">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
+  
+  <!-- PDF.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar" id="navbar">
+  <div class="container navbar-inner">
+    <a href="#hero" class="nav-brand">
+      <span class="nav-logo">⚖️</span>
+      <span class="nav-name">LegalMitra</span>
+    </a>
+    <ul class="nav-links" id="nav-links">
+      <li><a href="#hero" class="nav-link active" data-section="hero">Home</a></li>
+      <li><a href="#simplifier" class="nav-link" data-section="simplifier">Simplify Docs</a></li>
+      <li><a href="#chat" class="nav-link" data-section="chat">Legal Advisor</a></li>
+      <li><a href="#constitution" class="nav-link" data-section="constitution">Constitution</a></li>
+      <li><a href="#news" class="nav-link" data-section="news">📰 News</a></li>
+      <li><a href="#history" class="nav-link" data-section="history">History</a></li>
+    </ul>
+    <div class="nav-actions">
+      <div class="auth-nav-wrap" id="auth-nav-wrap">
+        <button class="auth-btn" id="auth-nav-btn">Sign In</button>
+      </div>
+      <button class="theme-toggle" id="theme-toggle" title="Toggle theme">🌙</button>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO SECTION -->
+<section class="hero section" id="hero">
+  <div class="container hero-content">
+    <span class="hero-badge">🤖 AI-Powered Legal Assistant</span>
+    <h1 class="hero-title">Understand the Law with <span class="gradient-text">LegalMitra</span></h1>
+    <p class="hero-subtitle">Your AI companion that simplifies complex legal documents, provides legal guidance, and explains constitutional rights — all in plain, easy-to-understand language.</p>
+    <div class="hero-features">
+      <a href="#simplifier" class="feature-card glass-card">
+        <div class="feature-icon">📄</div>
+        <h3 class="feature-title">Document Simplifier</h3>
+        <p class="feature-desc">Upload any legal document and get a clear, jargon-free summary in seconds.</p>
+      </a>
+      <a href="#chat" class="feature-card glass-card">
+        <div class="feature-icon">💬</div>
+        <h3 class="feature-title">Legal Advisor</h3>
+        <p class="feature-desc">Ask legal questions in plain language and get helpful AI-powered suggestions.</p>
+      </a>
+      <a href="#constitution" class="feature-card glass-card">
+        <div class="feature-icon">📜</div>
+        <h3 class="feature-title">Constitution Explorer</h3>
+        <p class="feature-desc">Browse and understand Indian Constitutional articles explained simply.</p>
+      </a>
+    </div>
+    <div class="cta-group">
+      <a href="#simplifier" class="cta-btn cta-btn-primary">Upload Document</a>
+      <a href="#chat" class="cta-btn cta-btn-secondary">Ask a Question</a>
+    </div>
+  </div>
+</section>
+
+<!-- DOCUMENT SIMPLIFIER -->
+<section class="section" id="simplifier">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title gradient-text">Document Simplifier</h2>
+      <p class="section-subtitle">Upload your legal document (PDF, DOCX, or TXT) and our AI will break it down into simple, understandable language.</p>
+    </div>
+    <div class="upload-zone glass-card" id="upload-area">
+      <div class="upload-icon">📁</div>
+      <p class="upload-text">Drag &amp; drop your legal document here</p>
+      <p class="upload-hint">or click to browse • Supports PDF, DOCX, TXT • Select multiple files</p>
+      <input type="file" id="file-input" accept=".pdf,.txt,.docx" multiple hidden />
+    </div>
+    <div class="upload-file-info glass-card hidden" id="file-info">
+      <span class="file-icon">📎</span>
+      <div class="file-details">
+        <span class="file-name" id="file-name"></span>
+        <span class="file-size" id="file-size"></span>
+      </div>
+      <button class="file-remove" id="file-remove" title="Remove file">✕</button>
+    </div>
+    <div class="hidden" id="simplify-loading">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Analyzing and simplifying your document...</p>
+    </div>
+    <div class="result-card glass-card hidden" id="upload-result">
+      <div class="result-header">
+        <h3 class="gradient-text">📋 Simplified Document</h3>
+        <div class="result-actions">
+          <button class="action-btn" id="copy-result-btn" title="Copy to clipboard">📋 Copy</button>
+          <button class="action-btn" id="upload-another-btn" title="Upload another document">📄 Upload Another</button>
+        </div>
+      </div>
+
+      <!-- Document Legitimacy & Fraud Confidence Meter -->
+      <div class="doc-risk-container" id="doc-risk-container">
+        <div class="doc-risk-header">
+          <div class="doc-risk-title-wrap">
+            <span class="doc-risk-icon" id="doc-risk-icon">🛡️</span>
+            <div>
+              <h4 class="doc-risk-title" id="doc-risk-title">Document Authenticity Assessment</h4>
+              <p class="doc-risk-status" id="doc-risk-status">Analyzing document validity...</p>
+            </div>
+          </div>
+          <div class="doc-risk-score" id="doc-risk-score">95% Legit</div>
+        </div>
+        <div class="doc-risk-bar-track">
+          <div class="doc-risk-bar-fill" id="doc-risk-bar-fill" style="width: 95%;"></div>
+        </div>
+        <p class="doc-risk-reason" id="doc-risk-reason"></p>
+      </div>
+
+      <div class="result-body" id="simplified-output"></div>
+
+      <!-- Follow-up Questions Section -->
+      <div class="doc-qa-container" id="doc-qa-container">
+        <div class="doc-qa-header">
+          <h4>💬 Ask Follow-up Questions</h4>
+          <p>Have specific questions about clauses, deadlines, or obligations in this document?</p>
+        </div>
+
+        <div class="doc-qa-warning hidden" id="doc-qa-blocked-warning">
+          ⚠️ <strong>Chatbot Locked:</strong> High fraud/suspicion risk (&gt;80%) detected in this document. AI follow-up chat is disabled to prevent automated processing of suspicious legal instruments.
+        </div>
+
+        <div class="doc-qa-messages" id="doc-qa-messages"></div>
+
+        <div class="doc-qa-suggestions" id="doc-qa-suggestions">
+          <button class="suggested-q-btn doc-qa-btn">What are my key obligations?</button>
+          <button class="suggested-q-btn doc-qa-btn">What is the termination clause?</button>
+          <button class="suggested-q-btn doc-qa-btn">Are there any penalties or risks?</button>
+        </div>
+
+        <div class="doc-qa-input-area" id="doc-qa-input-area">
+          <input type="text" class="chat-input" id="doc-qa-input" placeholder="Ask a question about this document..." autocomplete="off" />
+          <button class="chat-send" id="doc-qa-send-btn" title="Send question">➤</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LEGAL ADVISOR CHAT -->
+<section class="section" id="chat">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title gradient-text">Legal Advisor</h2>
+      <p class="section-subtitle">Ask any legal question in plain language. Get clear, helpful AI-powered guidance and suggestions.</p>
+    </div>
+    <div class="chat-layout">
+      <!-- Chat Sidebar -->
+      <div class="chat-sidebar" id="chat-sidebar">
+        <button class="sidebar-new-chat" id="new-chat-btn">+ New Chat</button>
+        <div class="sidebar-list" id="sidebar-chat-list">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+      <!-- Chat Main Area -->
+      <div class="chat-container glass-card">
+        <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle sidebar">☰</button>
+        <div class="chat-messages" id="chat-messages">
+          <div class="chat-welcome" id="chat-welcome">
+            <div class="welcome-icon">⚖️</div>
+            <h3>Welcome to Legal Advisor</h3>
+            <p>Ask me anything about Indian law, legal procedures, rights, or any legal matter. I'm here to help!</p>
+          </div>
+        </div>
+        <div class="suggested-questions" id="suggested-questions">
+          <button class="suggested-q-btn">What are my fundamental rights?</button>
+          <button class="suggested-q-btn">How do I file an FIR?</button>
+          <button class="suggested-q-btn">What is bail and how to apply?</button>
+          <button class="suggested-q-btn">Tenant rights in India</button>
+          <button class="suggested-q-btn">How to file a consumer complaint?</button>
+          <button class="suggested-q-btn">What is an RTI application?</button>
+        </div>
+        <div class="chat-input-area">
+          <input type="text" class="chat-input" id="chat-input" placeholder="Type your legal question here..." autocomplete="off" />
+          <button class="chat-send" id="chat-send-btn" title="Send message">➤</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONSTITUTION EXPLORER -->
+<section class="section" id="constitution">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title gradient-text">Constitution Explorer</h2>
+      <p class="section-subtitle">Browse key articles of the Indian Constitution. Click any article to get a simple, plain-language explanation.</p>
+    </div>
+    <div class="search-container">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="search-input" id="article-search" placeholder="Search articles by title, number, or keyword..." autocomplete="off" />
+    </div>
+    <div class="category-filters" id="category-filters">
+      <!-- Dynamically populated by JS -->
+    </div>
+    <div class="articles-grid" id="articles-grid">
+      <!-- Dynamically populated by JS -->
+    </div>
+    <div class="no-results hidden" id="no-results">
+      <p>😔 No articles match your search. Try different keywords.</p>
+    </div>
+  </div>
+</section>
+
+<!-- NEWS SECTION -->
+<section class="section" id="news">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title gradient-text">📰 Legal & General News</h2>
+      <p class="section-subtitle">Stay updated with the latest legal, judiciary, legislative, and general news from India.</p>
+    </div>
+    <div class="news-tabs" id="news-tabs">
+      <button class="news-tab active" data-feed="legal">⚖️ Legal</button>
+      <button class="news-tab" data-feed="judiciary">🏛️ Judiciary</button>
+      <button class="news-tab" data-feed="legislative">📜 Legislative</button>
+      <button class="news-tab" data-feed="general">🇮🇳 General</button>
+    </div>
+    <div class="news-grid" id="news-grid">
+      <div class="news-loading" id="news-loading">
+        <div class="loading-spinner"></div>
+        <p class="loading-text">Fetching latest news...</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HISTORY SECTION -->
+<section class="section" id="history">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title gradient-text">History</h2>
+      <p class="section-subtitle">Review your past document simplifications, chat conversations, and constitution lookups.</p>
+    </div>
+    <div class="history-container glass-card">
+      <div class="history-tabs" id="history-tabs">
+        <button class="history-tab active" data-tab="documents">📄 Documents</button>
+        <button class="history-tab" data-tab="chats">💬 Chats</button>
+        <button class="history-tab" data-tab="articles">📜 Articles</button>
+      </div>
+      <div class="history-actions">
+        <button class="clear-history-btn" id="clear-history-btn">🗑️ Clear History</button>
+      </div>
+      <div class="history-content" id="history-content">
+        <div class="history-list" id="history-list">
+          <!-- Dynamically populated -->
+        </div>
+        <div class="history-empty" id="history-empty">
+          <span class="empty-icon">📂</span>
+          <p>No history yet. Start exploring to build your history!</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ARTICLE DETAIL MODAL -->
+<div class="modal-overlay" id="article-detail-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title gradient-text" id="modal-article-title"></h3>
+      <button class="modal-close" id="article-detail-close">✕</button>
+    </div>
+    <div class="modal-body" id="article-detail-content">
+      <div class="article-full-text" id="modal-full-text"></div>
+      <button class="cta-btn cta-btn-primary explain-btn" id="explain-article-btn">🤖 Explain in Simple Terms</button>
+      <div class="ai-explanation hidden" id="modal-ai-explanation">
+        <h4 class="gradient-text">AI Explanation</h4>
+        <div id="modal-explanation-text"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY DETAIL MODAL -->
+<div class="modal-overlay" id="history-detail-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title gradient-text" id="history-modal-title"></h3>
+      <button class="modal-close" id="history-detail-close">✕</button>
+    </div>
+    <div class="modal-body" id="history-detail-content"></div>
+  </div>
+</div>
+
+<!-- AUTH MODAL (LOGIN / SIGNUP) -->
+<div class="modal-overlay" id="auth-modal">
+  <div class="modal auth-modal-box">
+    <div class="modal-header">
+      <div class="auth-tabs" id="auth-tabs">
+        <button class="auth-tab active" data-tab="login" id="auth-tab-login">Log In</button>
+        <button class="auth-tab" data-tab="signup" id="auth-tab-signup">Sign Up</button>
+      </div>
+      <button class="modal-close" id="auth-modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Google Sign In Button -->
+      <button class="google-auth-btn" id="google-auth-btn">
+        <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        <span id="google-btn-text">Continue with Google</span>
+      </button>
+
+      <div class="auth-divider">
+        <span>or with email</span>
+      </div>
+
+      <!-- Auth Form -->
+      <form class="auth-form" id="auth-form" onsubmit="return false;">
+        <div class="form-group hidden" id="signup-name-group">
+          <label for="auth-name">Full Name</label>
+          <input type="text" id="auth-name" class="chat-input" placeholder="e.g. Anuj Gupta" autocomplete="name" />
+        </div>
+
+        <div class="form-group">
+          <label for="auth-email">Email Address</label>
+          <input type="email" id="auth-email" class="chat-input" placeholder="you@example.com" required autocomplete="email" />
+        </div>
+
+        <div class="form-group">
+          <label for="auth-password">Password</label>
+          <input type="password" id="auth-password" class="chat-input" placeholder="••••••••" required autocomplete="current-password" />
+        </div>
+
+        <button type="submit" class="cta-btn cta-btn-primary auth-submit-btn" id="auth-submit-btn">Log In</button>
+      </form>
+
+      <p class="auth-switch-text" id="auth-switch-text">
+        Don't have an account? <a href="#" id="auth-switch-link">Sign up</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- USER PROFILE MODAL -->
+<div class="modal-overlay" id="profile-modal">
+  <div class="modal profile-modal-box">
+    <div class="modal-header">
+      <h3 class="modal-title gradient-text">User Profile</h3>
+      <button class="modal-close" id="profile-modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Profile Top Header -->
+      <div class="profile-header-card">
+        <div class="profile-avatar-wrap">
+          <div class="profile-avatar" id="profile-avatar">A</div>
+        </div>
+        <div class="profile-info-wrap">
+          <h3 class="profile-name" id="profile-display-name">Anuj Gupta</h3>
+          <p class="profile-email" id="profile-display-email">anuj@example.com</p>
+          <span class="profile-badge">⚖️ Legal Explorer • Free Tier</span>
+        </div>
+      </div>
+
+      <!-- Activity & Stats Grid -->
+      <div class="profile-stats-grid">
+        <div class="profile-stat-card">
+          <span class="stat-number" id="stat-docs-count">0</span>
+          <span class="stat-label">📄 Documents Simplified</span>
+        </div>
+        <div class="profile-stat-card">
+          <span class="stat-number" id="stat-chats-count">0</span>
+          <span class="stat-label">💬 Advisor Chats</span>
+        </div>
+        <div class="profile-stat-card">
+          <span class="stat-number" id="stat-articles-count">0</span>
+          <span class="stat-label">📜 Articles Explored</span>
+        </div>
+      </div>
+
+      <!-- Account Settings -->
+      <div class="profile-settings-section">
+        <h4>Account Settings</h4>
+        <div class="profile-field-row">
+          <label>Display Name</label>
+          <input type="text" id="profile-edit-name" class="chat-input" />
+        </div>
+        <div class="profile-field-row">
+          <label>Email</label>
+          <input type="email" id="profile-edit-email" class="chat-input" disabled />
+        </div>
+        <div class="profile-field-row">
+          <label>OpenAI API Key</label>
+          <button class="action-btn" id="profile-config-api-btn">⚙️ Configure API Key</button>
+        </div>
+      </div>
+
+      <!-- Profile Actions -->
+      <div class="profile-actions-bar">
+        <button class="cta-btn cta-btn-primary" id="profile-save-btn">💾 Save Changes</button>
+        <button class="clear-history-btn" id="profile-logout-btn">🚪 Log Out</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- API KEY MODAL -->
+<div class="modal-overlay" id="api-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title gradient-text">Configure API Key</h3>
+      <button class="modal-close" id="api-key-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="api-key-form">
+        <label for="api-key-input">OpenAI API Key</label>
+        <input type="password" id="api-key-input" placeholder="Enter your OpenAI API key (sk-...)" class="chat-input" />
+        <p class="api-key-info">Your API key is stored locally in your browser and never sent to any server except OpenAI's API. Get your key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" class="text-accent">OpenAI Platform</a>.</p>
+        <button class="cta-btn cta-btn-primary" id="api-key-save">💾 Save API Key</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer id="footer">
+  <div class="container">
+    <p class="footer-brand">⚖️ <span class="gradient-text">LegalMitra</span></p>
+    <p class="footer-disclaimer">⚠️ Disclaimer: LegalMitra provides AI-generated information for educational purposes only. It does not constitute legal advice. Always consult a qualified lawyer for legal matters.</p>
+    <p>© 2026 LegalMitra. Made with ❤️ for legal awareness.</p>
+  </div>
+</footer>
+
+<!-- Scripts -->
+<script src="constitution-data.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
