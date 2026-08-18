@@ -671,90 +671,54 @@ Rules:
       return { score, status, reason, cleanText };
     }
 
-    function renderFraudAssessment(assessment) {
-      if (!riskContainer) return;
-
-      const score = Math.max(0, Math.min(100, assessment.score || 15));
+    function generateFraudAssessmentHtml(assessment) {
+      const score = assessment.score || 0;
       const isHighRisk = score >= 80;
       const isCaution = score >= 35 && score < 80;
 
-      isDocChatBlocked = isHighRisk;
+      let icon = '🛡️';
+      let title = 'Document Authenticity Verified';
+      let statusText = `Legitimacy Confidence: ${100 - score}% — Appears standard & valid`;
+      let variantClass = 'legit';
+      let scoreBadge = `${100 - score}% Legit`;
+      let barPercent = 100 - score;
 
-      // Update UI Bar & Texts
       if (isHighRisk) {
-        if (riskIcon) riskIcon.textContent = '🚨';
-        if (riskTitle) riskTitle.textContent = 'High Fraud / Suspicion Risk Detected';
-        if (riskStatus) riskStatus.textContent = `Fraud Risk Score: ${score}% — Extreme caution advised`;
-        if (riskScoreEl) {
-          riskScoreEl.className = 'doc-risk-score fraud';
-          riskScoreEl.textContent = `${score}% Risk`;
-        }
-        if (riskFillEl) {
-          riskFillEl.className = 'doc-risk-bar-fill fraud';
-          riskFillEl.style.width = `${score}%`;
-        }
-
-        // Lock follow-up Q&A
-        if (docQaWarning) docQaWarning.classList.remove('hidden');
-        if (docQaInput) {
-          docQaInput.disabled = true;
-          docQaInput.placeholder = 'Follow-up chat locked due to high fraud risk (>80%).';
-        }
-        if (docQaSendBtn) docQaSendBtn.disabled = true;
-        if (docQaSuggestions) docQaSuggestions.classList.add('hidden');
-        if (docQaInputArea) docQaInputArea.classList.add('disabled');
-
-        showToast('High fraud risk detected (>80%). AI chat restricted for security.', 'error');
+        icon = '🚨';
+        title = 'High Fraud / Suspicion Risk Detected';
+        statusText = `Fraud Risk Score: ${score}% — Extreme caution advised`;
+        variantClass = 'fraud';
+        scoreBadge = `${score}% Risk`;
+        barPercent = score;
       } else if (isCaution) {
-        if (riskIcon) riskIcon.textContent = '⚠️';
-        if (riskTitle) riskTitle.textContent = 'Document Authenticity: Moderate Ambiguity';
-        if (riskStatus) riskStatus.textContent = `Suspicion Score: ${score}% — Review specific terms carefully`;
-        if (riskScoreEl) {
-          riskScoreEl.className = 'doc-risk-score caution';
-          riskScoreEl.textContent = `${score}% Risk`;
-        }
-        if (riskFillEl) {
-          riskFillEl.className = 'doc-risk-bar-fill caution';
-          riskFillEl.style.width = `${score}%`;
-        }
-
-        // Enable follow-up Q&A
-        if (docQaWarning) docQaWarning.classList.add('hidden');
-        if (docQaInput) {
-          docQaInput.disabled = false;
-          docQaInput.placeholder = 'Ask a question about this document...';
-        }
-        if (docQaSendBtn) docQaSendBtn.disabled = false;
-        if (docQaSuggestions) docQaSuggestions.classList.remove('hidden');
-        if (docQaInputArea) docQaInputArea.classList.remove('disabled');
-      } else {
-        const legitScore = 100 - score;
-        if (riskIcon) riskIcon.textContent = '🛡️';
-        if (riskTitle) riskTitle.textContent = 'Document Authenticity Verified';
-        if (riskStatus) riskStatus.textContent = `Legitimacy Confidence: ${legitScore}% — Appears standard & valid`;
-        if (riskScoreEl) {
-          riskScoreEl.className = 'doc-risk-score legit';
-          riskScoreEl.textContent = `${legitScore}% Legit`;
-        }
-        if (riskFillEl) {
-          riskFillEl.className = 'doc-risk-bar-fill legit';
-          riskFillEl.style.width = `${legitScore}%`;
-        }
-
-        // Enable follow-up Q&A
-        if (docQaWarning) docQaWarning.classList.add('hidden');
-        if (docQaInput) {
-          docQaInput.disabled = false;
-          docQaInput.placeholder = 'Ask a question about this document...';
-        }
-        if (docQaSendBtn) docQaSendBtn.disabled = false;
-        if (docQaSuggestions) docQaSuggestions.classList.remove('hidden');
-        if (docQaInputArea) docQaInputArea.classList.remove('disabled');
+        icon = '⚠️';
+        title = 'Document Authenticity: Moderate Ambiguity';
+        statusText = `Suspicion Score: ${score}% — Review specific terms carefully`;
+        variantClass = 'caution';
+        scoreBadge = `${score}% Risk`;
+        barPercent = score;
       }
 
-      if (riskReasonEl) {
-        riskReasonEl.textContent = assessment.reason || 'Structural analysis complete.';
-      }
+      const reason = escapeHtml(assessment.reason || 'Structural analysis complete.');
+
+      return `
+        <div class="doc-risk-container" style="margin: 0.75rem 0 1.25rem 0;">
+          <div class="doc-risk-header">
+            <div class="doc-risk-title-wrap">
+              <span class="doc-risk-icon">${icon}</span>
+              <div>
+                <h4 class="doc-risk-title">${title}</h4>
+                <p class="doc-risk-status">${statusText}</p>
+              </div>
+            </div>
+            <div class="doc-risk-score ${variantClass}">${scoreBadge}</div>
+          </div>
+          <div class="doc-risk-bar-track">
+            <div class="doc-risk-bar-fill ${variantClass}" style="width: ${barPercent}%;"></div>
+          </div>
+          <p class="doc-risk-reason">${reason}</p>
+        </div>
+      `;
     }
 
     function resetDocSimplifier() {
@@ -825,10 +789,8 @@ Rules:
           throw new Error('Could not extract content from the uploaded file(s).');
         }
 
-        let finalOutput = '';
-        const summaries = [];
-        let aggregatedFraudScore = 0;
-        let aggregatedFraudReason = '';
+        const fileSummaries = [];
+        let hasHighRisk = false;
 
         for (let i = 0; i < fileData.length; i++) {
           const item = fileData[i];
@@ -846,33 +808,66 @@ Rules:
 
           if (rawResponse) {
             const parsed = parseFraudAssessment(rawResponse);
-            aggregatedFraudScore = Math.max(aggregatedFraudScore, parsed.score);
-            if (parsed.reason) aggregatedFraudReason = parsed.reason;
+            if (parsed.score >= 80) hasHighRisk = true;
 
-            if (fileData.length > 1) {
-              summaries.push(`## 📄 Summary of: ${item.name}\n\n${parsed.cleanText}`);
-            } else {
-              summaries.push(parsed.cleanText);
-            }
+            fileSummaries.push({
+              name: item.name,
+              parsed
+            });
           }
         }
 
-        finalOutput = summaries.join('\n\n---\n\n');
-        currentFileText = fileData.filter(f => f.type === 'text').map(f => f.content).join('\n\n') || finalOutput;
-
-        if (finalOutput) {
+        if (fileSummaries.length > 0) {
           loadingState.classList.add('hidden');
           uploadResult.classList.remove('hidden');
-          if (outputArea) outputArea.innerHTML = formatMarkdown(finalOutput);
 
-          // Render fraud & legitimacy assessment meter
-          renderFraudAssessment({
-            score: aggregatedFraudScore,
-            reason: aggregatedFraudReason || 'Structural and clause verification complete.'
-          });
+          // Render each document with its own dedicated confidence bar + summary
+          const renderedBlocks = fileSummaries.map((fObj, idx) => {
+            const titleHeader = `<h3>📄 Summary of: ${escapeHtml(fObj.name)}</h3>`;
+            const confidenceBar = generateFraudAssessmentHtml(fObj.parsed);
+            const markdownSummary = formatMarkdown(fObj.parsed.cleanText);
+            const divider = idx > 0 ? `<hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--border);" />` : '';
+
+            return `
+              <div class="doc-single-summary-block">
+                ${divider}
+                ${titleHeader}
+                ${confidenceBar}
+                <div class="doc-summary-content">${markdownSummary}</div>
+              </div>
+            `;
+          }).join('');
+
+          if (outputArea) outputArea.innerHTML = renderedBlocks;
+
+          // Follow-up Q&A security check
+          if (hasHighRisk) {
+            isDocChatBlocked = true;
+            if (docQaWarning) docQaWarning.classList.remove('hidden');
+            if (docQaInput) {
+              docQaInput.disabled = true;
+              docQaInput.placeholder = 'Follow-up chat locked due to high fraud risk (>80%) in uploaded document(s).';
+            }
+            if (docQaSendBtn) docQaSendBtn.disabled = true;
+            if (docQaSuggestions) docQaSuggestions.classList.add('hidden');
+            if (docQaInputArea) docQaInputArea.classList.add('disabled');
+            showToast('High fraud risk detected in uploaded document. AI chat restricted.', 'error');
+          } else {
+            isDocChatBlocked = false;
+            if (docQaWarning) docQaWarning.classList.add('hidden');
+            if (docQaInput) {
+              docQaInput.disabled = false;
+              docQaInput.placeholder = 'Ask a question about this document...';
+            }
+            if (docQaSendBtn) docQaSendBtn.disabled = false;
+            if (docQaSuggestions) docQaSuggestions.classList.remove('hidden');
+            if (docQaInputArea) docQaInputArea.classList.remove('disabled');
+          }
 
           // Save to history
-          saveDocHistory(fileNames.join(', '), (currentFileText || 'Uploaded document').substring(0, 200), finalOutput);
+          const allTextSummaries = fileSummaries.map(f => `## 📄 Summary of: ${f.name}\n\n${f.parsed.cleanText}`).join('\n\n---\n\n');
+          currentFileText = fileData.filter(f => f.type === 'text').map(f => f.content).join('\n\n') || allTextSummaries;
+          saveDocHistory(fileNames.join(', '), (currentFileText || 'Uploaded document').substring(0, 200), allTextSummaries);
         } else {
           resetDocSimplifier();
         }
