@@ -203,13 +203,13 @@ Formatting Rules:
   // ==========================================
   function initTheme() {
     const toggleBtn = document.getElementById('theme-toggle');
-    const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME) || 'dark';
+    const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME) || 'light';
 
     applyTheme(savedTheme);
 
     if (toggleBtn) {
       toggleBtn.addEventListener('click', () => {
-        const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
         const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
         applyTheme(newTheme);
         localStorage.setItem(STORAGE_KEYS.THEME, newTheme);
@@ -222,7 +222,7 @@ Formatting Rules:
     document.documentElement.setAttribute('data-theme', theme);
     const toggleBtn = document.getElementById('theme-toggle');
     if (toggleBtn) {
-      toggleBtn.textContent = theme === 'dark' ? '🌙' : '☀️';
+      toggleBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
       toggleBtn.title = `Switch to ${theme === 'dark' ? 'Light' : 'Dark'} theme`;
     }
   }
