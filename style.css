@@ -187,6 +187,7 @@ a:hover {
 
 .section {
   padding: 4.5rem 0;
+  scroll-margin-top: 75px;
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -228,10 +229,9 @@ a:hover {
   position: sticky;
   top: 0;
   z-index: 1000;
-  background: var(--bg-header);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--bg-card);
   border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
   padding: 0.75rem 0;
   transition: all var(--transition);
 }
